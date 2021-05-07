@@ -43,6 +43,10 @@ public class Client {
   private static IService.Client client;
   private static CommandLine commandLine;
 
+  private static String username;
+  private static String password;
+  private static long sessionId = -1;
+
   public static void main(String[] args) {
     commandLine = parseCmd(args);
     if (commandLine.hasOption(HELP_ARGS)) {
@@ -66,21 +70,17 @@ public class Client {
           case Global.SHOW_TIME:
             getTime();
             break;
-
-          // pwf
           case Global.CONNECT:
             connect();
             break;
           case Global.DISCONNECT:
             disconnect();
             break;
-          // pwf
-
           case Global.QUIT:
             open = false;
             break;
           default:
-            println("Invalid statements!");
+            executeStatement(msg.trim());
             break;
         }
         long endTime = System.currentTimeMillis();
@@ -95,28 +95,43 @@ public class Client {
     }
   }
 
-  // pwf
   private static void connect() {
-    ConnectReq req = new ConnectReq("pwf", "123");
+    if (sessionId > 0) {
+      println("Already connected!");
+      return;
+    }
+
+    println("please input username:");
+    username = SCANNER.nextLine().trim();
+    println("please input password:");
+    password = SCANNER.nextLine().trim();
+
+    ConnectReq req = new ConnectReq(username, password);
     try {
       ConnectResp connectResp = client.connect(req);
       if (connectResp.status.code == SUCCESS_CODE) {
+        sessionId = connectResp.sessionId;
         println("connect success!");
-        println("sessionId is " + String.valueOf(connectResp.sessionId));
+        println("sessionId is " + String.valueOf(sessionId));
       }
-      else
-      {
-        println("connect fail!");
+      else {
+        println("connect fail!" + connectResp.status.getMsg());
       }
     } catch (TException e) {
       logger.error(e.getMessage());
     }
   }
+
   private static void disconnect() {
-    DisconnetReq req = new DisconnetReq(1);
+    if (sessionId == -1){
+      println("Already disconnected!");
+      return;
+    }
+    DisconnetReq req = new DisconnetReq(sessionId);
     try {
       DisconnetResp disconnectResp = client.disconnect(req);
       if (disconnectResp.status.code == SUCCESS_CODE) {
+        sessionId = -1;
         println("disconnect success!");
       }
       else
@@ -127,7 +142,28 @@ public class Client {
       logger.error(e.getMessage());
     }
   }
-  // pwf
+
+  private static void executeStatement(String executeStatement) {
+    if (sessionId == -1){
+      println("Connect first!");
+      return;
+    }
+
+    ExecuteStatementReq req = new ExecuteStatementReq(sessionId, executeStatement);
+    try {
+      ExecuteStatementResp executeStatementResp = client.executeStatement(req);
+      if (executeStatementResp.status.code == SUCCESS_CODE) {
+        println("success!");
+
+        // 如果有查询则返回结果
+      }
+      else {
+        println("fail!");
+      }
+    } catch (TException e) {
+      logger.error(e.getMessage());
+    }
+  }
 
 
   private static void getTime() {
