@@ -109,6 +109,7 @@ public class Table implements Iterable<Row> {
     try{
       lock.writeLock().lock();
       index.put(entries.get(primaryIndex), row);
+      entries.add(entries.get(primaryIndex));
     }catch (Exception e){
       throw e;
     }
@@ -125,6 +126,7 @@ public class Table implements Iterable<Row> {
     try{
       lock.writeLock().lock();
       index.remove(entry);
+      entries.remove(entries.get(primaryIndex));
     }catch (Exception e){
       throw e;
     }finally{
@@ -158,6 +160,7 @@ public class Table implements Iterable<Row> {
     try {
       lock.writeLock().lock();
       index.update(primaryEntry, row);
+
     }catch(Exception e){
       throw e;
     }finally{
