@@ -23,7 +23,6 @@ public class Table implements Iterable<Row> {
   public ArrayList<Entry> entries;
 
   public Table(String databaseName, String tableName, Column[] columns) {
-    // TODO
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.columns = new ArrayList<>(Arrays.asList(columns));
@@ -157,9 +156,12 @@ public class Table implements Iterable<Row> {
       row.entries.get(schemaIndex).value = entries.get(schemaIndex).value;
     }
     try {
+      lock.writeLock().lock();
       index.update(primaryEntry, row);
     }catch(Exception e){
       throw e;
+    }finally{
+      lock.writeLock().unlock();
     }
   }
 
