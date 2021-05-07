@@ -6,6 +6,7 @@ import cn.edu.thssdb.exception.OperateTableWithNullException;
 import cn.edu.thssdb.exception.SchemaLengthMismatchException;
 
 import javax.lang.model.type.ArrayType;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -18,6 +19,7 @@ public class Table implements Iterable<Row> {
   public ArrayList<Column> columns;
   public BPlusTree<Entry, Row> index;
   private int primaryIndex;
+  public ArrayList<Entry> entries;
 
   public Table(String databaseName, String tableName, Column[] columns) {
     // TODO
@@ -31,10 +33,16 @@ public class Table implements Iterable<Row> {
       if (this.columns.get(i).isPrimary())
         primaryIndex = i;
     }
+    this.lock = new ReentrantReadWriteLock();
   }
 
   private void recover() {
-    // TODO
+    File file = new File("Data/table_init.txt");
+    ArrayList<Row>rows = deserialize(file);
+    for(Row row : rows){
+      index.put(row.getEntries().get(this.primaryIndex),row);
+      entries.add(row.getEntries().get(this.primaryIndex));
+    }
   }
 
   private void checkNull(ArrayList<Column> columns, ArrayList<Entry> entries){
@@ -55,6 +63,7 @@ public class Table implements Iterable<Row> {
       throw new SchemaLengthMismatchException(schemaLen, entriesLen, "entries");
     }
   }
+
 
 
   /**
@@ -89,9 +98,13 @@ public class Table implements Iterable<Row> {
     // TODO: check whether the inserted entries is valid
     Row row = new Row(entries.toArray(new Entry[0]));
     try{
+      lock.writeLock().lock();
       index.put(entries.get(primaryIndex), row);
     }catch (Exception e){
       throw e;
+    }
+    finally{
+      lock.writeLock().unlock();
     }
   }
 
@@ -102,9 +115,12 @@ public class Table implements Iterable<Row> {
   public void delete(Entry entry) {
     // TODO
     try{
+      lock.writeLock().lock();
       index.remove(entry);
     }catch (Exception e){
       throw e;
+    }finally{
+      lock.writeLock().unlock();
     }
   }
 
@@ -112,13 +128,37 @@ public class Table implements Iterable<Row> {
     // TODO
   }
 
-  private void serialize() {
-    // TODO
+  public void persist(){
+    ArrayList<Row> rows = new ArrayList<Row>();
+    for(Entry entry : entries){
+      rows.add(index.get(entry));
+    }
+    serialize(rows,"Data/table_int.txt");
   }
 
-  private ArrayList<Row> deserialize() {
-    // TODO
-    return null;
+  private void serialize(ArrayList<Row> rows,String fileName){
+    try{
+      ObjectOutputStream oo = new ObjectOutputStream(new FileOutputStream(
+              new File(fileName)));
+      oo.writeObject(rows);
+      System.out.println("successfully serialize file!");
+      oo.close();}
+    catch(Exception e){
+      System.out.println("error occurs when serializing file");
+    }
+  }
+
+  private ArrayList<Row> deserialize(File file){
+    ArrayList<Row> rows;
+    try{
+      ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
+      rows = (ArrayList<Row>) ois.readObject();
+      System.out.println("successfully deserialize file! ");
+    } catch (Exception e) {
+      rows = null;
+      System.out.println("error occurs when deserializing file");
+    }
+    return rows;
   }
 
   private class TableIterator implements Iterator<Row> {
