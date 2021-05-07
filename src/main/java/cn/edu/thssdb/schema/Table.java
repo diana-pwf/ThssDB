@@ -71,7 +71,7 @@ public class Table implements Iterable<Row> {
    *  功能：传入欲查询记录主 entry，返回对应的一行记录
    *  参数：entry为待查询记录的主 entry
    */
-  public Row get(Entry entry){
+  public Row getRow(Entry entry){
     Row row;
     try{
       row = index.get(entry);
@@ -131,7 +131,7 @@ public class Table implements Iterable<Row> {
       throw e;
     }
 
-    Row row = this.get(primaryEntry);
+    Row row = this.getRow(primaryEntry);
     int columnsLen = columns.size();
     int schemaIndex = 0, columnIndex = 0;
     for(; columnIndex < columnsLen; columnIndex++){
