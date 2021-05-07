@@ -26,7 +26,11 @@ public class Table implements Iterable<Row> {
     this.columns = new ArrayList<>(Arrays.asList(columns));
     this.index = new BPlusTree<>();
     this.lock = new ReentrantReadWriteLock();
-
+    for (int i = 0; i < this.columns.size(); i++)
+    {
+      if (this.columns.get(i).isPrimary())
+        primaryIndex = i;
+    }
   }
 
   private void recover() {
@@ -82,7 +86,13 @@ public class Table implements Iterable<Row> {
       throw e;
     }
 
-
+    // TODO: check whether the inserted entries is valid
+    Row row = new Row(entries.toArray(new Entry[0]));
+    try{
+      index.put(entries.get(primaryIndex), row);
+    }catch (Exception e){
+      throw e;
+    }
   }
 
   /**
