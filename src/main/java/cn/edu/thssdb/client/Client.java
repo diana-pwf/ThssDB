@@ -78,7 +78,6 @@ public class Client {
             break;
           case Global.QUIT:
             open = false;
-            break;
           default:
             executeStatement(msg.trim());
             break;
