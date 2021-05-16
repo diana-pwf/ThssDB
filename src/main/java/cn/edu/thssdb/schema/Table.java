@@ -100,26 +100,14 @@ public class Table implements Iterable<Row> {
   }
 
   /**
-   *  功能：插入记录
-   *  参数：columns 为 schema, entries 为记录键
+   * 功能：给定一个 ArrayList<Entry>，实际将数据插入表中
+   * @param entry_list
+   * TODO: 页式存储修改
    */
-  public void insert(ArrayList<Column> columns, ArrayList<Entry> entry_list) {
-    // check whether there is null columns or entries
-    // check whether the length of columns and entries is preferable
-    /*
-    try{
-      checkNull(columns, entry_list);
-      checkLen(columns, entry_list, true);
-    }catch (Exception e){
-      throw e;
-    }
-    */
-
-    // TODO: check whether the inserted entries is valid
-    Row row = new Row(entry_list.toArray(new Entry[0]));
+  public void insert(ArrayList<Entry> entry_list) {
     try{
       lock.writeLock().lock();
-      index.put(entry_list.get(primaryIndex), row);
+      index.put(entry_list.get(primaryIndex), new Row(entry_list.toArray(new Entry[0])));
       entries.add(entry_list.get(primaryIndex));
     }catch (Exception e){
       throw e;
@@ -129,7 +117,7 @@ public class Table implements Iterable<Row> {
   }
 
   /**
-   * 功能：给定一个 String 列表，依序插入 table 中
+   * 功能：给定一个 String 列表，构建一个 ArrayList<Entry> 之后传给 insert(ArrayList<Entry> entry_list) 真正进行插入
    * @param values: 遍历语法树后得到的 String 列表
    */
 
@@ -159,19 +147,12 @@ public class Table implements Iterable<Row> {
       }
     }
 
-    try{
-      lock.writeLock().lock();
-      index.put(rowEntries.get(primaryIndex), new Row(rowEntries.toArray(new Entry[0])));
-      entries.add(rowEntries.get(primaryIndex));
-    }catch (Exception e){
-      throw e;
-    }finally{
-      lock.writeLock().unlock();
-    }
+    insert(rowEntries);
   }
 
   /**
-   * 功能：给定一个 Column 列表和 String 列表，依 columns 和 values 的对应位置插入，对于剩下的位置则默认插入 null
+   * 功能：给定一个 Column 列表和 String 列表，依 columns 和 values 的对应位置构建一个 ArrayList<Entry>
+   *     之后传给 insert(ArrayList<Entry> entry_list) 真正进行插入
    * @param columns: specifying 要插入的列
    * @param values: 要插入的值（以 String[] 传入）
    */
@@ -223,15 +204,7 @@ public class Table implements Iterable<Row> {
       }
     }
 
-    try{
-      lock.writeLock().lock();
-      index.put(rowEntries.get(primaryIndex), new Row(rowEntries.toArray(new Entry[0])));
-      entries.add(rowEntries.get(primaryIndex));
-    }catch (Exception e){
-      throw e;
-    }finally{
-      lock.writeLock().unlock();
-    }
+    insert(rowEntries);
   }
 
 
