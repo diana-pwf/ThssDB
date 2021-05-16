@@ -4,6 +4,10 @@ import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
+import cn.edu.thssdb.type.ColumnType;
+
+import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -17,11 +21,13 @@ public class Database {
     this.name = name;
     this.tables = new HashMap<>();
     this.lock = new ReentrantReadWriteLock();
-    recover();
-  }
-
-  private void persist() {
-    // TODO
+    try
+    {
+      this.recover();
+    }
+    catch (Exception e){
+      System.out.println("Error occurs when database recovers data!");
+    }
   }
 
   public void createTableIfNotExists(String tableName, Column[] tableColumns) {
@@ -51,7 +57,8 @@ public class Database {
 
       // TODO: 取决于Table类中的drop函数实现
       // TODO: 可以再检查是否已删除表对应的记录文件
-      table.drop();
+      // TODO: 记得取消下方注释
+      //  table.drop();
 
       table = null;
       tables.remove(tableName);
@@ -70,12 +77,64 @@ public class Database {
     return null;
   }
 
-  private void recover() {
-    // TODO
+  public void persist() throws IOException {
+    for(Table table:tables.values()){
+      // store format: "DATA/meta_DatabaseName_tableName.data"
+      File file = new File("DATA/"+"meta"+"_"+this.name+'_'+table.tableName+".data");
+      FileOutputStream fop = new FileOutputStream(file);
+      OutputStreamWriter writer = new OutputStreamWriter(fop);
+      for(Column col : table.columns){
+        writer.write(col.toString()+"\n");
+      }
+      writer.close();
+      fop.close();
+    }
   }
 
-  public void quit() {
-    // TODO
+  private void recover() throws IOException {
+    File dir = new File("DATA/");
+    File[] fileList = dir.listFiles();
+    if(fileList == null){
+      System.out.println("Directory contains no file.");
+      return;
+    }
+    for(File file : fileList){
+      if(!file.isFile()){
+        continue;
+      }
+      String[] index = file.getName().split("\\.")[0].split("_");
+      if(index[0].equals("meta") && index[1].equals(this.name)){
+        String tableName = index[2];
+        ArrayList<Column> columns = new ArrayList<>();
+        BufferedReader reader = new BufferedReader(new FileReader(file));
+        while (reader.readLine()!=null) {
+          String str = reader.readLine();
+          String[] colAttrs = str.split(",");
+          String name = colAttrs[0];
+          ColumnType type = ColumnType.valueOf(colAttrs[1]);
+          int primary = Integer.parseInt(colAttrs[2]);
+          boolean notNull = Boolean.parseBoolean(colAttrs[3]);
+          int maxLength = Integer.parseInt(colAttrs[4]);
+          columns.add(new Column(name,type,primary,notNull,maxLength));
+        }
+        createTableIfNotExists(tableName,columns.toArray(new Column[0]));
+        reader.close();
+      }
+    }
+  }
+
+  public void quit() throws IOException {
+    try {
+      lock.writeLock().lock();
+      for (Table table : tables.values()) {
+        table.persist();
+      }
+      persist();
+    } catch (Exception e) {
+      throw e;
+    } finally {
+      lock.writeLock().unlock();
+    }
   }
 
   public void dropSelf() {

@@ -50,15 +50,6 @@ public class Table implements Iterable<Row> {
     this.lock = new ReentrantReadWriteLock();
   }
 
-  private void recover() {
-    File file = new File("Data/table_init.txt");
-    ArrayList<Row>rows = deserialize(file);
-    for(Row row : rows){
-      index.put(row.getEntries().get(this.primaryIndex),row);
-      entries.add(row.getEntries().get(this.primaryIndex));
-    }
-  }
-
   private void checkNull(ArrayList<Column> columns, ArrayList<Entry> entries){
     if(columns == null){
       throw new OperateTableWithNullException("columns");
@@ -314,12 +305,30 @@ public class Table implements Iterable<Row> {
     }
   }
 
+  private void recover() {
+    File file = new File("DATA/"+this.databaseName+'_'+this.tableName+".data");
+    if(!file.exists()){
+      System.out.println("Table file doesn't exist!");
+      return;
+    }
+    ArrayList<Row>rows = deserialize(file);
+    for(Row row : rows){
+      if(row.entries.size()!=this.columns.size()){
+        System.out.println("ERROR: File column data doesn't match with schema!");
+        return;
+      }
+      index.put(row.getEntries().get(this.primaryIndex),row);
+      entries.add(row.getEntries().get(this.primaryIndex));
+    }
+  }
+
   public void persist(){
     ArrayList<Row> rows = new ArrayList<Row>();
     for(Entry entry : entries){
       rows.add(index.get(entry));
     }
-    serialize(rows,"Data/table_int.txt");
+    // store format:"databaseName_tableName.data"
+    serialize(rows,"DATA/"+this.databaseName+'_'+this.tableName+".data");
   }
 
   private void serialize(ArrayList<Row> rows,String fileName){
