@@ -58,7 +58,7 @@ public class Database {
       // TODO: 取决于Table类中的drop函数实现
       // TODO: 可以再检查是否已删除表对应的记录文件
       // TODO: 记得取消下方注释
-      //  table.drop();
+      table.drop();
 
       table = null;
       tables.remove(tableName);
