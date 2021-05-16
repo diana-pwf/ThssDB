@@ -273,6 +273,10 @@ public class Table implements Iterable<Row> {
     }
   }
 
+  public void drop(){
+    
+  }
+
   /**
    *  FIXME:
    *  功能：提供待修改记录的主 entry，将根据传入参数修改 row
