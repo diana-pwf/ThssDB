@@ -134,6 +134,10 @@ public class Table implements Iterable<Row> {
     }
   }
 
+  public void drop() {
+
+  }
+
   /**
    *  功能：提供待修改记录的主 entry，将根据传入参数修改 row
    *  参数：entry为待修改记录的主 entry，columns 和 entries 是要修改的对应属性和值

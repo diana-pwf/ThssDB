@@ -1,5 +1,8 @@
 package cn.edu.thssdb.service;
 
+import cn.edu.thssdb.parser.SQLLexer;
+import cn.edu.thssdb.parser.SQLParser;
+import cn.edu.thssdb.parser.StatementVisitor;
 import cn.edu.thssdb.rpc.thrift.ConnectReq;
 import cn.edu.thssdb.rpc.thrift.ConnectResp;
 import cn.edu.thssdb.rpc.thrift.DisconnetReq;
@@ -10,7 +13,10 @@ import cn.edu.thssdb.rpc.thrift.GetTimeReq;
 import cn.edu.thssdb.rpc.thrift.GetTimeResp;
 import cn.edu.thssdb.rpc.thrift.IService;
 import cn.edu.thssdb.rpc.thrift.Status;
+import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.utils.Global;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
 import org.apache.thrift.TException;
 
 import java.util.ArrayList;
@@ -18,6 +24,9 @@ import java.util.Date;
 
 public class IServiceHandler implements IService.Iface {
   private static long sessionNum = 0;
+
+
+  public Manager manager = Manager.getInstance();
 
   @Override
   public GetTimeResp getTime(GetTimeReq req) throws TException {
@@ -80,7 +89,11 @@ public class IServiceHandler implements IService.Iface {
       }
 
       String command = statement.split(" ")[0];
-      // 根据command类型 分类执行
+      // TODO: 考虑事务
+
+      String result = handleCommand(command, req.sessionId, manager);
+
+
     }
 
     resp.setStatus(new Status(Global.SUCCESS_CODE));
@@ -88,4 +101,24 @@ public class IServiceHandler implements IService.Iface {
     resp.setHasResult(true);
     return resp;
   }
+
+
+  public String handleCommand(String command, long sessionId, Manager manager) {
+    //词法分析
+    SQLLexer lexer = new SQLLexer(CharStreams.fromString(command));
+    CommonTokenStream tokens = new CommonTokenStream(lexer);
+
+    //句法分析
+    SQLParser parser = new SQLParser(tokens);
+
+    //语义分析
+    try {
+      StatementVisitor visitor = new StatementVisitor(manager, sessionId);   //测试默认session-999
+      return String.valueOf(visitor.visitParse(parser.parse()));
+    } catch (Exception e) {
+      return "Exception: illegal SQL statement! Error message: " + e.getMessage();
+    }
+
+  }
 }
+

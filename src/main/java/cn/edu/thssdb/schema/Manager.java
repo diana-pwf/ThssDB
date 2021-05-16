@@ -61,7 +61,7 @@ public class Manager {
 
   }
 
-  public void switchDatabase(String databaseName) {
+  private void switchDatabase(String databaseName) {
     try{
       lock.readLock().lock();
 
