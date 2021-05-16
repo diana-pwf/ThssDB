@@ -40,7 +40,7 @@ public class Manager {
     }
   }
 
-  private void deleteDatabase(String databaseName) {
+  private void dropDatabase(String databaseName) {
     try{
       lock.writeLock().lock();
       // 判断数据库是否存在
@@ -49,9 +49,7 @@ public class Manager {
       }
 
       Database database = databases.get(databaseName);
-      database.drop();
-
-      //TODO: 取决于Database类中的drop函数实现
+      database.dropSelf();
       database = null;
       databases.remove(databaseName);
 
