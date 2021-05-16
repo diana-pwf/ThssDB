@@ -1,7 +1,7 @@
 package cn.edu.thssdb.exception;
 
 /**
- * 非空 column 被插入空值时报错
+ * 插入元素长度超过长度限制时的异常
  * 成员变量：列名称
  */
 

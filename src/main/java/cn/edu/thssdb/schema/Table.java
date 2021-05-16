@@ -5,11 +5,7 @@ import cn.edu.thssdb.query.Condition;
 import cn.edu.thssdb.utils.Pair;
 
 import cn.edu.thssdb.helper.*;
-
-// TODO: check whether they are useful
-import cn.edu.thssdb.exception.OperateTableWithNullException;
-import cn.edu.thssdb.exception.SchemaLengthMismatchException;
-import cn.edu.thssdb.exception.ExceedSchemaLengthException;
+import cn.edu.thssdb.exception.*;
 
 import javax.lang.model.type.ArrayType;
 import java.io.*;
@@ -142,6 +138,7 @@ public class Table implements Iterable<Row> {
   }
 
   /**
+   * 功能：给定一个 String 列表，依序插入 table 中
    * @param values: 遍历语法树后得到的 String 列表
    */
 
@@ -155,14 +152,78 @@ public class Table implements Iterable<Row> {
     }
 
     ArrayList<Entry> rowEntries = new ArrayList<Entry>();
-    int i = 0;
     Column col;
+    Comparable value;
     ValueParser vp = new ValueParser();
 
-    for(; i < schemaLength; i++){
+    for(int i = 0 ; i < schemaLength; i++){
       col = columns.get(i);
       // 如果 column 数多于 value 数，表示后面的 value 都是 null
-      Comparable value = i < values.length ? vp.getValue(col, values[i]) : null;
+      value = i < values.length ? vp.getValue(col, values[i]) : null;
+      try{
+        vp.checkValid(col, value);
+        rowEntries.add(new Entry(value));
+      }catch (Exception e){
+        throw e;
+      }
+    }
+
+    try{
+      lock.writeLock().lock();
+      index.put(rowEntries.get(primaryIndex), new Row(rowEntries.toArray(new Entry[0])));
+      entries.add(rowEntries.get(primaryIndex));
+    }catch (Exception e){
+      throw e;
+    }finally{
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * 功能：给定一个 Column 列表和 String 列表，依 columns 和 values 的对应位置插入，对于剩下的位置则默认插入 null
+   * @param columns: specifying 要插入的列
+   * @param values: 要插入的值（以 String[] 传入）
+   */
+
+  public void insert(ArrayList<Column> columns, String[] values){
+    if(values == null){
+      throw new OperateTableWithNullException("value");
+    } else if(columns == null){
+      throw new OperateTableWithNullException("column");
+    }
+
+    int columnsLen = columns.size();
+    int valuesLen = values.length;
+    if(columnsLen > schemaLength){
+      throw new ExceedSchemaLengthException(schemaLength, columnsLen, "columns");
+    }else if(valuesLen > schemaLength) {
+      throw new ExceedSchemaLengthException(schemaLength, valuesLen, "values");
+    }else if(columnsLen != valuesLen){
+      throw new SchemaLengthMismatchException(columnsLen, valuesLen, "columns");
+    }
+
+    // 检查是否有未定义 column 或有重复 column
+    for(Column column: columns){
+      if(this.columns.indexOf(column) < 0){
+        throw new ColumnNotExistException(databaseName, tableName, column.getName());
+      }
+      if(columns.indexOf(column) != columns.lastIndexOf(column)){
+        throw new DuplicateColumnException(column.getName());
+      }
+    }
+
+    ArrayList<Entry> rowEntries = new ArrayList<Entry>();
+    int i = 0;
+    Comparable value;
+    ValueParser vp = new ValueParser();
+
+    for(Column col : this.columns){
+      value = null;
+      for(; i < columnsLen; i++){
+        if(col.compareTo(columns.get(i)) != 0) continue;
+        value = vp.getValue(col, values[i]);
+        break;
+      }
       try{
         vp.checkValid(col, value);
         rowEntries.add(new Entry(value));
@@ -183,8 +244,6 @@ public class Table implements Iterable<Row> {
   }
 
 
-
-
   /**
    *  功能：提供待删除记录的主 entry，将对应记录自 index 中删除
    *  参数：entry为待删除记录的主 entry
@@ -203,7 +262,7 @@ public class Table implements Iterable<Row> {
 
 
   /**
-   *
+   * 功能：遍历表中的 Row，针对每一行数据进行逻辑判断（是否符合删除的条件）
    * @param condition: 删除条件
    */
 
@@ -222,12 +281,14 @@ public class Table implements Iterable<Row> {
   public void update(Entry primaryEntry, ArrayList<Column> columns, ArrayList<Entry> entries) {
     // check whether there is null columns or entries
     // check whether the length of columns and entries is preferable
+    /*
     try{
       checkNull(columns, entries);
       checkLen(columns, entries, false);
     }catch (Exception e){
       throw e;
     }
+    */
 
     Row row = this.getRow(primaryEntry);
     int columnsLen = columns.size();
@@ -248,9 +309,6 @@ public class Table implements Iterable<Row> {
       lock.writeLock().unlock();
     }
   }
-
-
-
 
   public void persist(){
     ArrayList<Row> rows = new ArrayList<Row>();
