@@ -1,7 +1,12 @@
 package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.index.BPlusTree;
+import cn.edu.thssdb.query.Condition;
 import cn.edu.thssdb.utils.Pair;
+
+import cn.edu.thssdb.helper.*;
+
+// TODO: check whether they are useful
 import cn.edu.thssdb.exception.OperateTableWithNullException;
 import cn.edu.thssdb.exception.SchemaLengthMismatchException;
 import cn.edu.thssdb.exception.ExceedSchemaLengthException;
@@ -13,11 +18,20 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ *  参数说明：
+ *  primaryIndex: 记录本张表的主键位置作为主属性
+ *  entries: 记录本表所有主键（FIXME: 根据参考架构，可以改到页式）
+ *  index<主键，记录>: 记录索引，使用 row = index.get(primaryEntry) 可以拿到对应主键的记录
+ */
+
+
 public class Table implements Iterable<Row> {
   ReentrantReadWriteLock lock;
   private String databaseName;
   public String tableName;
   public ArrayList<Column> columns;
+  public int schemaLength;
   public BPlusTree<Entry, Row> index;
   private int primaryIndex;
   public ArrayList<Entry> entries;
@@ -26,12 +40,16 @@ public class Table implements Iterable<Row> {
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.columns = new ArrayList<>(Arrays.asList(columns));
+    this.schemaLength = this.columns.size();
     this.index = new BPlusTree<>();
     this.lock = new ReentrantReadWriteLock();
+    // 记录 primary key 的位置 primary index
     for (int i = 0; i < this.columns.size(); i++)
     {
-      if (this.columns.get(i).isPrimary())
+      if (this.columns.get(i).isPrimary()){
         primaryIndex = i;
+        break;
+      }
     }
     this.lock = new ReentrantReadWriteLock();
   }
@@ -53,21 +71,26 @@ public class Table implements Iterable<Row> {
     }
   }
 
+  /**
+   * FIXME: redundant
+   * @param columns
+   * @param entries
+   * @param equal
+   */
   private void checkLen(ArrayList<Column> columns, ArrayList<Entry> entries, boolean equal){
-    int schemaLen = this.columns.size();
     int columnsLen = columns.size();
     int entriesLen = entries.size();
     if(equal){
-      if(columnsLen != schemaLen){
-        throw new SchemaLengthMismatchException(schemaLen, columnsLen, "columns");
-      }else if(entriesLen != schemaLen){
-        throw new SchemaLengthMismatchException(schemaLen, entriesLen, "entries");
+      if(columnsLen != schemaLength){
+        throw new SchemaLengthMismatchException(schemaLength, columnsLen, "columns");
+      }else if(entriesLen != schemaLength){
+        throw new SchemaLengthMismatchException(schemaLength, entriesLen, "entries");
       }
     }else{
-      if(columnsLen > schemaLen){
-        throw new ExceedSchemaLengthException(schemaLen, columnsLen, "columns");
-      }else if(entriesLen > schemaLen) {
-        throw new ExceedSchemaLengthException(schemaLen, entriesLen, "entries");
+      if(columnsLen > schemaLength){
+        throw new ExceedSchemaLengthException(schemaLength, columnsLen, "columns");
+      }else if(entriesLen > schemaLength) {
+        throw new ExceedSchemaLengthException(schemaLength, entriesLen, "entries");
       }else if(columnsLen != entriesLen){
         throw new SchemaLengthMismatchException(columnsLen, entriesLen, "columns");
       }
@@ -93,30 +116,74 @@ public class Table implements Iterable<Row> {
    *  功能：插入记录
    *  参数：columns 为 schema, entries 为记录键
    */
-  public void insert(ArrayList<Column> columns, ArrayList<Entry> entries) {
-    // TODO
+  public void insert(ArrayList<Column> columns, ArrayList<Entry> entry_list) {
     // check whether there is null columns or entries
     // check whether the length of columns and entries is preferable
+    /*
     try{
-      checkNull(columns, entries);
-      checkLen(columns, entries, true);
+      checkNull(columns, entry_list);
+      checkLen(columns, entry_list, true);
     }catch (Exception e){
       throw e;
     }
+    */
 
     // TODO: check whether the inserted entries is valid
-    Row row = new Row(entries.toArray(new Entry[0]));
+    Row row = new Row(entry_list.toArray(new Entry[0]));
     try{
       lock.writeLock().lock();
-      index.put(entries.get(primaryIndex), row);
-      entries.add(entries.get(primaryIndex));
+      index.put(entry_list.get(primaryIndex), row);
+      entries.add(entry_list.get(primaryIndex));
     }catch (Exception e){
       throw e;
-    }
-    finally{
+    }finally{
       lock.writeLock().unlock();
     }
   }
+
+  /**
+   * @param values: 遍历语法树后得到的 String 列表
+   */
+
+  public void insert(String[] values){
+    if(values == null){
+      throw new OperateTableWithNullException("value");
+    }
+
+    if(values.length > schemaLength){
+      throw new SchemaLengthMismatchException(schemaLength, values.length, "value");
+    }
+
+    ArrayList<Entry> rowEntries = new ArrayList<Entry>();
+    int i = 0;
+    Column col;
+    ValueParser vp = new ValueParser();
+
+    for(; i < schemaLength; i++){
+      col = columns.get(i);
+      // 如果 column 数多于 value 数，表示后面的 value 都是 null
+      Comparable value = i < values.length ? vp.getValue(col, values[i]) : null;
+      try{
+        vp.checkValid(col, value);
+        rowEntries.add(new Entry(value));
+      }catch (Exception e){
+        throw e;
+      }
+    }
+
+    try{
+      lock.writeLock().lock();
+      index.put(rowEntries.get(primaryIndex), new Row(rowEntries.toArray(new Entry[0])));
+      entries.add(rowEntries.get(primaryIndex));
+    }catch (Exception e){
+      throw e;
+    }finally{
+      lock.writeLock().unlock();
+    }
+  }
+
+
+
 
   /**
    *  功能：提供待删除记录的主 entry，将对应记录自 index 中删除
@@ -126,7 +193,7 @@ public class Table implements Iterable<Row> {
     try{
       lock.writeLock().lock();
       index.remove(entry);
-      entries.remove(entries.get(primaryIndex));
+      entries.remove(entry);
     }catch (Exception e){
       throw e;
     }finally{
@@ -134,7 +201,21 @@ public class Table implements Iterable<Row> {
     }
   }
 
+
   /**
+   *
+   * @param condition: 删除条件
+   */
+
+  public void delete(Condition condition){
+    for(Row row : this){
+      if(condition != null && condition.JudgeCondition(row) == false ) continue;
+      delete(row.getEntries().get(primaryIndex));
+    }
+  }
+
+  /**
+   *  FIXME:
    *  功能：提供待修改记录的主 entry，将根据传入参数修改 row
    *  参数：entry为待修改记录的主 entry，columns 和 entries 是要修改的对应属性和值
    */
@@ -159,14 +240,17 @@ public class Table implements Iterable<Row> {
     }
     try {
       lock.writeLock().lock();
-      index.update(primaryEntry, row);
-
+      index.update(row.getEntries().get(primaryIndex), row);
+      entries.set(primaryIndex, row.getEntries().get(primaryIndex));
     }catch(Exception e){
       throw e;
     }finally{
       lock.writeLock().unlock();
     }
   }
+
+
+
 
   public void persist(){
     ArrayList<Row> rows = new ArrayList<Row>();

@@ -149,6 +149,7 @@ public class Client {
       return;
     }
 
+    // 构建一个 executeStatementRequest
     ExecuteStatementReq req = new ExecuteStatementReq(sessionId, executeStatement);
     try {
       ExecuteStatementResp executeStatementResp = client.executeStatement(req);
