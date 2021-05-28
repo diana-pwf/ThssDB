@@ -30,7 +30,7 @@ public class Manager {
     }
   }
 
-  private void createDatabaseIfNotExists(String databaseName) {
+  public void createDatabaseIfNotExists(String databaseName) {
     try{
       lock.writeLock().lock();
       // 若哈希表中没有该数据库名称，则新建并加入
@@ -49,7 +49,7 @@ public class Manager {
     }
   }
 
-  private void dropDatabase(String databaseName) {
+  public void dropDatabase(String databaseName) {
     try{
       lock.writeLock().lock();
       // 判断数据库是否存在
@@ -70,7 +70,7 @@ public class Manager {
 
   }
 
-  private void switchDatabase(String databaseName) {
+  public void switchDatabase(String databaseName) {
     try{
       lock.readLock().lock();
 

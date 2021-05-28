@@ -45,6 +45,12 @@ public class Database {
     }
   }
 
+  public Table getTable(String tableName){
+    return tables.get(tableName);
+  }
+
+  public String getName() { return name;}
+
   public void dropTable(String tableName) {
     try{
       lock.writeLock().lock();
