@@ -31,11 +31,15 @@ public class StatementVisitor extends SQLBaseVisitor{
 
     public QueryResult visitSql_stmt(SQLParser.Sql_stmtContext ctx) {
         // 处理各种语句和情况
-//        if (ctx.delete_stmt() != null) {
-//            String message = visitDelete_stmt(ctx.delete_stmt());
+        if (ctx.insert_stmt() != null) {
+//            String message = visitInsert_stmt(ctx.insert_stmt());
 //            return new QueryResult(message);
-//        }
+        }
         return null;
+    }
+
+    public String visitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
+        return "qwq";
     }
 
 
