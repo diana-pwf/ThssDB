@@ -230,10 +230,12 @@ public class Table implements Iterable<Row> {
    * @param condition: 删除条件
    */
 
+  //FIXME: use multipleCondition to delete
   public void delete(Condition condition){
     for(Row row : this){
-      if(condition != null && condition.JudgeCondition(row) == false ) continue;
-      delete(row.getEntries().get(primaryIndex));
+//      if(condition != null && condition.JudgeCondition(row) == false ) continue;
+     delete(row.getEntries().get(primaryIndex));
+
     }
   }
 
