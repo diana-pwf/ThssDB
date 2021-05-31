@@ -166,4 +166,19 @@ public class Database {
       lock.writeLock().unlock();
     }
   }
+
+  public String showTableMeta(String tableName) {
+    Table table = getTable(tableName);
+    return table.showMeta();
+  }
+
+  public String showAllTables() {
+    StringBuilder result = new StringBuilder("databaseName: " + this.name + "\n" + "\n");
+    for(Table table : tables.values()) {
+      if(table != null) {
+        result.append(table.showMeta()).append("\n");
+      }
+    }
+    return result.toString();
+  }
 }

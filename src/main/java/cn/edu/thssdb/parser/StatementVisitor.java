@@ -12,6 +12,8 @@ import cn.edu.thssdb.type.ComparatorType;
 import cn.edu.thssdb.type.ComparerType;
 import cn.edu.thssdb.type.ConditionType;
 
+import javax.xml.crypto.Data;
+import java.awt.image.AreaAveragingScaleFilter;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
@@ -32,7 +34,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
     @Override
     public ArrayList<QueryResult> visitSql_stmt_list(SQLParser.Sql_stmt_listContext ctx) {
-        StringJoiner sj = new StringJoiner("\n\n");
+        // StringJoiner sj = new StringJoiner("\n\n");
         ArrayList<QueryResult> result = new ArrayList<QueryResult>();
         for (SQLParser.Sql_stmtContext subCtx : ctx.sql_stmt())
             result.add(visitSql_stmt(subCtx));
@@ -91,17 +93,17 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         //
         if(ctx.show_db_stmt() != null){
-
+            return new QueryResult(visitShow_db_stmt(ctx.show_db_stmt()));
         }
 
         //
         if(ctx.show_table_stmt() != null){
-
+            return new QueryResult(visitShow_table_stmt(ctx.show_table_stmt()));
         }
 
         //
         if(ctx.show_meta_stmt() != null){
-
+            return new QueryResult(visitShow_meta_stmt(ctx.show_meta_stmt()));
         }
 
         // quit
@@ -455,6 +457,8 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // TODO: 读取QueryTable变量
 
+        QueryTable queryTable = null;
+
         int tableNum = ctx.table_query().size();
         if (tableNum == 0) {
             // TODO: 抛异常
@@ -464,16 +468,16 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // TODO: 考虑事务
-        /*
         try {
-            return database.select(columnNames, the_query_table, conditions, distinct);
+            // TODO
+            // database.select(columnNames, queryTable, conditions, distinct);
+            return new QueryResult("");
         } catch (Exception e) {
-            QueryResult error_result = new QueryResult(e.toString());
-            return error_result;
+            return new QueryResult(e.toString());
+
         }
 
-         */
-        return null;
+        // return null;
     }
 
     /** 执行update指令 **/
@@ -493,10 +497,50 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // TODO: 考虑事务
+        try{
+            return database.update(table_name, column_name, comparer, conditions);
+        }
+        catch (Exception e) {
+            return e.toString();
+        }
 
-        return database.update(table_name, column_name, comparer, conditions);
     }
 
+    /** 执行show db指令 **/
+    @Override
+    public String visitShow_db_stmt(SQLParser.Show_db_stmtContext ctx) {
+        try {
+            return manager.ShowAllDatabases();
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
+    /** 执行show table指令 **/
+    @Override
+    public String visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
+        Database database = manager.getCurrentDatabase();
+        try {
+            return database.showAllTables();
+        } catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
+    /** 执行show meta指令 **/
+    @Override
+    public String visitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx) {
+        if (ctx.table_name() != null){
+            String tableName = visitTable_name(ctx.table_name());
+            Database database = manager.getCurrentDatabase();
+            try {
+                return database.showTableMeta(tableName);
+            } catch (Exception e) {
+                return e.getMessage();
+            }
+        }
+        return null;
+    }
 
     /** 处理复合逻辑 **/
     @Override
@@ -518,6 +562,7 @@ public class StatementVisitor extends SQLBaseVisitor{
                 visitMultiple_condition(ctx.multiple_condition(1)), type);
     }
 
+    /** 获取整个逻辑表达式 **/
     @Override
     public Condition visitCondition(SQLParser.ConditionContext ctx) {
         Comparer left = visitExpression(ctx.expression(0));
@@ -526,6 +571,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         return new Condition(left, right, type);
     }
 
+    /** 获取单个条件表达式 **/
     @Override
     public Comparer visitExpression(SQLParser.ExpressionContext ctx) {
         if (ctx.comparer() != null) {
@@ -534,6 +580,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         return null;
     }
 
+    /** 获取单个条件表达式 **/
     @Override
     public Comparer visitComparer(SQLParser.ComparerContext ctx) {
         if (ctx.column_full_name() != null) {
@@ -544,6 +591,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         String literalValue = ctx.literal_value().getText();
         return new Comparer(literalType, literalValue);
     }
+
 
     public ComparerType visitLiteralType(SQLParser.Literal_valueContext ctx) {
         if (ctx.NUMERIC_LITERAL() != null) {
@@ -581,6 +629,9 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
         return null;
     }
+
+
+
 
     public QueryTable visitQueryTable() {
         // TODO: 单一表
