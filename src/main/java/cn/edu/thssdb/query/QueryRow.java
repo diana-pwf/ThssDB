@@ -1,5 +1,7 @@
 package cn.edu.thssdb.query;
 
+import cn.edu.thssdb.exception.ColumnNotExistException;
+import cn.edu.thssdb.exception.IllegalSQLStatement;
 import cn.edu.thssdb.parser.SQLParser;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
@@ -36,6 +38,25 @@ public class QueryRow extends Row {
     }
 // TODO: implement calColumnComparer
     public Comparer calColumnComparer(String column){
+        // table.column
+        if(column.contains(".")){
+            String[] seq = column.split(".");
+            if(seq.length!=2){
+                throw new IllegalSQLStatement(column);
+            }
+            String table_name = seq[0];
+            String column_name = seq[1];
+            for(MetaInfo metaInfo : MetaInfoList){
+                if(metaInfo.getTableName().equals(table_name)){
+                    if(metaInfo.columnFind(column_name)==-1){
+                        throw new ColumnNotExistException(metaInfo.getDatabaseName(),metaInfo.getTableName(),column_name);
+                    }
+
+
+                }
+            }
+
+        }
         return null;
     }
 }

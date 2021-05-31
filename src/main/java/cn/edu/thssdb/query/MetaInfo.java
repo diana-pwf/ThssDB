@@ -8,14 +8,28 @@ class MetaInfo {
 
   private String tableName;
   private List<Column> columns;
+  private String databaseName;
 
-  MetaInfo(String tableName, ArrayList<Column> columns) {
+  MetaInfo(String databaseName,String tableName, ArrayList<Column> columns) {
     this.tableName = tableName;
     this.columns = columns;
+    this.databaseName = databaseName;
   }
 
-  int columnFind(String name) {
-    // TODO
-    return 0;
+  public int columnFind(String name) {
+    for(int i=0;i<columns.size();i++){
+      if(columns.get(i).getName().equals(name)){
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  public String getTableName(){
+    return tableName;
+  }
+
+  public String getDatabaseName(){
+    return databaseName;
   }
 }
