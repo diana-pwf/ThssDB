@@ -1,12 +1,16 @@
 package cn.edu.thssdb.parser;
 
-import cn.edu.thssdb.query.QueryResult;
+import cn.edu.thssdb.exception.DatabaseNotExistException;
+import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
 import cn.edu.thssdb.utils.Pair;
+import cn.edu.thssdb.type.ComparatorType;
+import cn.edu.thssdb.type.ComparerType;
+import cn.edu.thssdb.type.ConditionType;
 
 import java.awt.image.AreaAveragingScaleFilter;
 import java.util.ArrayList;
@@ -76,14 +80,20 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         }
 
+        // insert
+        if(ctx.insert_stmt() != null){
+            visitInsert_stmt(ctx.insert_stmt());
+            // return new QueryResult(msg);
+        }
+
         // select
         if(ctx.select_stmt() != null){
-
+            return visitSelect_stmt(ctx.select_stmt());
         }
 
         // update
         if(ctx.update_stmt() != null){
-
+            return new QueryResult(visitUpdate_stmt(ctx.update_stmt()));
         }
 
         //
@@ -382,5 +392,166 @@ public class StatementVisitor extends SQLBaseVisitor{
             msg = e.getMessage();
         }
         return new QueryResult(msg);
+    }
+
+    /** 执行select指令 **/
+    @Override
+    public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx){
+
+        Database database = manager.getCurrentDatabase();
+        if(database == null) {
+            throw new DatabaseNotExistException();
+        }
+
+        boolean distinct = (ctx.K_DISTINCT() != null);
+
+        multipleCondition conditions = null;
+        if (ctx.K_WHERE() != null) {
+            conditions = visitMultiple_condition(ctx.multiple_condition());
+        }
+
+        ArrayList<String> columnNames = new ArrayList<String>();
+
+        int columnNum = ctx.result_column().size();
+        for (int i = 0; i < columnNum; i++) {
+            String columnName = ctx.result_column(i).getText().toLowerCase();
+            if (columnName.equals("*")) {
+                columnNames.clear();
+                break;
+            }
+            columnNames.add(columnName);
+        }
+
+        // TODO: 读取QueryTable变量
+
+        int tableNum = ctx.table_query().size();
+        if (tableNum == 0) {
+            // TODO: 抛异常
+        }
+        for (int i = 0; i < tableNum; i++) {
+
+        }
+
+        // TODO: 考虑事务
+        try {
+            return database.select(columnNames, the_query_table, conditions, distinct);
+        } catch (Exception e) {
+            QueryResult error_result = new QueryResult(e.toString());
+            return error_result;
+        }
+    }
+
+    /** 执行update指令 **/
+    @Override
+    public String visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
+        Database database = manager.getCurrentDatabase();
+
+        String table_name = ctx.table_name().getText().toLowerCase();
+
+        String column_name = ctx.column_name().getText().toLowerCase();
+
+        Comparer comparer = visitExpression(ctx.expression());
+
+        multipleCondition conditions = null;
+        if (ctx.K_WHERE() != null) {
+            conditions = visitMultiple_condition(ctx.multiple_condition());
+        }
+
+        // TODO: 考虑事务
+
+        return database.update(table_name, column_name, comparer, conditions);
+    }
+
+
+    /** 处理复合逻辑 **/
+    @Override
+    public multipleCondition visitMultiple_condition(SQLParser.Multiple_conditionContext ctx) {
+        // 单一条件
+        if (ctx.condition() != null) {
+            return new multipleCondition(visitCondition(ctx.condition()));
+        }
+
+        // 复合逻辑
+        ConditionType type = null;
+        if (ctx.AND() != null) {
+            type = ConditionType.AND;
+        }
+        else if (ctx.OR() != null) {
+            type = ConditionType.OR;
+        }
+        return new multipleCondition(visitMultiple_condition(ctx.multiple_condition(0)),
+                visitMultiple_condition(ctx.multiple_condition(1)), type);
+    }
+
+    @Override
+    public Condition visitCondition(SQLParser.ConditionContext ctx) {
+        Comparer left = visitExpression(ctx.expression(0));
+        Comparer right = visitExpression(ctx.expression(0));
+        ComparatorType type = visitComparator(ctx.comparator());
+        return new Condition(left, right, type);
+    }
+
+    @Override
+    public Comparer visitExpression(SQLParser.ExpressionContext ctx) {
+        if (ctx.comparer() != null) {
+            return visitComparer(ctx.comparer());
+        }
+        return null;
+    }
+
+    @Override
+    public Comparer visitComparer(SQLParser.ComparerContext ctx) {
+        if (ctx.column_full_name() != null) {
+            return new Comparer(ComparerType.COLUMN, ctx.column_full_name().getText());
+        }
+
+        ComparerType literalType = visitLiteralType(ctx.literal_value());
+        String literalValue = ctx.literal_value().getText();
+        return new Comparer(literalType, literalValue);
+    }
+
+    public ComparerType visitLiteralType(SQLParser.Literal_valueContext ctx) {
+        if (ctx.NUMERIC_LITERAL() != null) {
+            return ComparerType.NUMERIC;
+        }
+        else if (ctx.STRING_LITERAL() != null) {
+            return ComparerType.STRING;
+        }
+        else if (ctx.K_NULL() != null)
+        {
+            return ComparerType.NULL;
+        }
+        return null;
+    }
+
+    @Override
+    public ComparatorType visitComparator(SQLParser.ComparatorContext ctx) {
+        if (ctx.EQ() != null) {
+            return ComparatorType.EQ;
+        }
+        else if (ctx.GE() != null) {
+            return ComparatorType.GE;
+        }
+        else if (ctx.GT() != null) {
+            return ComparatorType.GT;
+        }
+        else if (ctx.LE() != null) {
+            return ComparatorType.LE;
+        }
+        else if (ctx.LT() != null) {
+            return ComparatorType.LT;
+        }
+        else if (ctx.NE() != null) {
+            return ComparatorType.NE;
+        }
+        return null;
+    }
+
+    public QueryTable visitQueryTable() {
+        // TODO: 单一表
+
+        // TODO: 处理复合逻辑
+
+        return null;
     }
 }

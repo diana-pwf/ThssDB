@@ -32,6 +32,7 @@ cn\edu\thssdb\rpc\thrift\IService$AsyncClient$getTime_call.class
 cn\edu\thssdb\rpc\thrift\ExecuteStatementResp$ExecuteStatementRespTupleSchemeFactory.class
 cn\edu\thssdb\rpc\thrift\ExecuteStatementReq.class
 cn\edu\thssdb\rpc\thrift\GetTimeReq$GetTimeReqTupleScheme.class
+cn\edu\thssdb\helper\ValueParser.class
 cn\edu\thssdb\parser\SQLParser$Sql_stmtContext.class
 cn\edu\thssdb\rpc\thrift\Status$1.class
 cn\edu\thssdb\parser\SQLParser$Quit_stmtContext.class
@@ -43,7 +44,9 @@ cn\edu\thssdb\exception\KeyNotExistException.class
 cn\edu\thssdb\rpc\thrift\ConnectReq$ConnectReqTupleSchemeFactory.class
 cn\edu\thssdb\rpc\thrift\IService$1.class
 cn\edu\thssdb\rpc\thrift\IService$AsyncIface.class
+cn\edu\thssdb\exception\ColumnNotExistException.class
 cn\edu\thssdb\rpc\thrift\IService$getTime_args$getTime_argsTupleScheme.class
+cn\edu\thssdb\exception\DuplicateColumnException.class
 cn\edu\thssdb\rpc\thrift\IService$disconnect_result.class
 cn\edu\thssdb\rpc\thrift\DisconnetResp$DisconnetRespStandardSchemeFactory.class
 cn\edu\thssdb\rpc\thrift\IService$Client$Factory.class
@@ -59,6 +62,7 @@ cn\edu\thssdb\exception\DuplicateKeyException.class
 cn\edu\thssdb\parser\SQLParser$Column_full_nameContext.class
 cn\edu\thssdb\rpc\thrift\ConnectResp$_Fields.class
 cn\edu\thssdb\rpc\thrift\ExecuteStatementReq$ExecuteStatementReqStandardScheme.class
+cn\edu\thssdb\parser\StatementVisitor.class
 cn\edu\thssdb\rpc\thrift\IService$getTime_args$getTime_argsTupleSchemeFactory.class
 cn\edu\thssdb\type\AlignType.class
 cn\edu\thssdb\service\IServiceHandler.class
@@ -90,7 +94,10 @@ cn\edu\thssdb\rpc\thrift\IService$AsyncProcessor$disconnect.class
 cn\edu\thssdb\rpc\thrift\IService$executeStatement_args.class
 cn\edu\thssdb\parser\SQLParser$ComparatorContext.class
 cn\edu\thssdb\index\BPlusTreeNode.class
+cn\edu\thssdb\exception\SchemaLengthMismatchException.class
+cn\edu\thssdb\helper\ValueParser$1.class
 cn\edu\thssdb\query\QueryTable.class
+cn\edu\thssdb\query\Condition.class
 cn\edu\thssdb\rpc\thrift\ConnectResp.class
 cn\edu\thssdb\parser\SQLParser$Create_db_stmtContext.class
 cn\edu\thssdb\rpc\thrift\IService$connect_args$connect_argsTupleSchemeFactory.class
@@ -107,12 +114,14 @@ cn\edu\thssdb\rpc\thrift\IService$AsyncClient.class
 cn\edu\thssdb\rpc\thrift\IService$getTime_result$getTime_resultTupleSchemeFactory.class
 cn\edu\thssdb\rpc\thrift\IService$executeStatement_args$executeStatement_argsTupleSchemeFactory.class
 cn\edu\thssdb\rpc\thrift\ExecuteStatementResp.class
+cn\edu\thssdb\exception\NullValueException.class
 cn\edu\thssdb\rpc\thrift\IService$AsyncProcessor$getTime$1.class
 cn\edu\thssdb\rpc\thrift\ConnectResp$ConnectRespStandardSchemeFactory.class
 cn\edu\thssdb\parser\SQLParser$Drop_db_stmtContext.class
 cn\edu\thssdb\parser\SQLParser$Update_stmtContext.class
 cn\edu\thssdb\rpc\thrift\IService$getTime_args$_Fields.class
 cn\edu\thssdb\parser\SQLParser$User_nameContext.class
+cn\edu\thssdb\exception\OperateTableWithNullException.class
 cn\edu\thssdb\parser\SQLParser$Delete_stmtContext.class
 cn\edu\thssdb\parser\SQLParser$Show_table_stmtContext.class
 cn\edu\thssdb\rpc\thrift\IService$disconnect_args$_Fields.class
@@ -174,9 +183,11 @@ cn\edu\thssdb\rpc\thrift\IService$Processor$getTime.class
 cn\edu\thssdb\parser\SQLParser$View_nameContext.class
 cn\edu\thssdb\query\MetaInfo.class
 cn\edu\thssdb\rpc\thrift\ExecuteStatementReq$_Fields.class
+cn\edu\thssdb\exception\TableNotExistException.class
 cn\edu\thssdb\parser\SQLParser$Table_constraintContext.class
 cn\edu\thssdb\server\ThssDB.class
 cn\edu\thssdb\parser\SQLParser$Use_db_stmtContext.class
+cn\edu\thssdb\exception\ExceedSchemaLengthException.class
 cn\edu\thssdb\parser\SQLBaseVisitor.class
 cn\edu\thssdb\parser\SQLParser$Grant_stmtContext.class
 cn\edu\thssdb\rpc\thrift\IService$getTime_args$getTime_argsStandardScheme.class
@@ -186,6 +197,7 @@ cn\edu\thssdb\rpc\thrift\ConnectReq.class
 cn\edu\thssdb\parser\SQLParser$Value_entryContext.class
 cn\edu\thssdb\rpc\thrift\ExecuteStatementReq$ExecuteStatementReqTupleScheme.class
 cn\edu\thssdb\client\Client.class
+cn\edu\thssdb\exception\DatabaseNotExistException.class
 cn\edu\thssdb\rpc\thrift\IService$connect_result$connect_resultStandardSchemeFactory.class
 cn\edu\thssdb\rpc\thrift\Status$_Fields.class
 cn\edu\thssdb\rpc\thrift\IService$disconnect_args$disconnect_argsTupleSchemeFactory.class
@@ -194,6 +206,7 @@ cn\edu\thssdb\parser\SQLParser$Drop_view_stmtContext.class
 cn\edu\thssdb\rpc\thrift\IService$Processor.class
 cn\edu\thssdb\parser\SQLParser$Column_defContext.class
 cn\edu\thssdb\parser\SQLLexer.class
+cn\edu\thssdb\exception\ValueExceedMaxLengthException.class
 cn\edu\thssdb\rpc\thrift\ConnectReq$_Fields.class
 cn\edu\thssdb\rpc\thrift\IService.class
 cn\edu\thssdb\rpc\thrift\IService$connect_result$connect_resultStandardScheme.class

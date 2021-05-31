@@ -3,6 +3,7 @@ package cn.edu.thssdb.service;
 import cn.edu.thssdb.parser.SQLLexer;
 import cn.edu.thssdb.parser.SQLParser;
 import cn.edu.thssdb.parser.StatementVisitor;
+import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.rpc.thrift.ConnectReq;
 import cn.edu.thssdb.rpc.thrift.ConnectResp;
 import cn.edu.thssdb.rpc.thrift.DisconnetReq;
@@ -80,6 +81,7 @@ public class IServiceHandler implements IService.Iface {
     }
 
     String[] statements = req.getStatement().split(";");
+    ArrayList<QueryResult> queryResults = new ArrayList<QueryResult>();
     for (String statement : statements) {
       statement = statement.trim();
 
@@ -91,10 +93,12 @@ public class IServiceHandler implements IService.Iface {
       String command = statement.split(" ")[0];
       // TODO: 考虑事务
 
-      String result = handleCommand(command, req.sessionId, manager);
-
+      ArrayList<QueryResult> result = handleCommand(command, req.sessionId, manager);
+      queryResults.addAll(result);
 
     }
+
+    // TODO: 将queryResults中的结果加入resp
 
     resp.setStatus(new Status(Global.SUCCESS_CODE));
     resp.setIsAbort(false);
@@ -103,7 +107,7 @@ public class IServiceHandler implements IService.Iface {
   }
 
 
-  public String handleCommand(String command, long sessionId, Manager manager) {
+  public ArrayList<QueryResult> handleCommand(String command, long sessionId, Manager manager) {
     //词法分析
     SQLLexer lexer = new SQLLexer(CharStreams.fromString(command));
     CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -114,9 +118,11 @@ public class IServiceHandler implements IService.Iface {
     //语义分析
     try {
       StatementVisitor visitor = new StatementVisitor(manager, sessionId);   //测试默认session-999
-      return String.valueOf(visitor.visitParse(parser.parse()));
+      return visitor.visitParse(parser.parse());
     } catch (Exception e) {
-      return "Exception: illegal SQL statement! Error message: " + e.getMessage();
+      ArrayList<QueryResult> queryResult = new ArrayList<QueryResult>();
+      queryResult.add(new QueryResult("Exception: illegal SQL statement! Error message: " + e.getMessage()));
+      return queryResult;
     }
 
   }

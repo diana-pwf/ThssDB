@@ -2,8 +2,10 @@ package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.exception.TableNotExistException;
+import cn.edu.thssdb.query.Comparer;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
+import cn.edu.thssdb.query.multipleCondition;
 import cn.edu.thssdb.type.ColumnType;
 
 import java.io.*;
@@ -63,7 +65,6 @@ public class Database {
 
       // TODO: 取决于Table类中的drop函数实现
       // TODO: 可以再检查是否已删除表对应的记录文件
-      // TODO: 记得取消下方注释
       table.drop();
 
       table = null;
@@ -81,6 +82,11 @@ public class Database {
     // TODO
     QueryResult queryResult = new QueryResult(queryTables);
     return null;
+  }
+
+  public String update(String tableName, String columnName, Comparer comparer, multipleCondition conditions) {
+    Table table = getTable(tableName);
+    return table.update(columnName, comparer, conditions);
   }
 
   public void persist() throws IOException {
@@ -129,7 +135,7 @@ public class Database {
     }
   }
 
-  public void quit() throws IOException {
+  public void quit(){
     try {
       lock.writeLock().lock();
       for (Table table : tables.values()) {
@@ -137,7 +143,7 @@ public class Database {
       }
       persist();
     } catch (Exception e) {
-      throw e;
+      e.printStackTrace();
     } finally {
       lock.writeLock().unlock();
     }
@@ -151,7 +157,6 @@ public class Database {
 
       for (Table table: tables.values()) {
         dropTable(table.tableName);
-
       }
       // tables.clear();
       tables = null;
