@@ -68,13 +68,13 @@ public class StatementVisitor extends SQLBaseVisitor{
 
          */
 
+        // insert
+        if(ctx.insert_stmt() != null){ return visitInsert_stmt(ctx.insert_stmt());}
+
         // delete
         if(ctx.delete_stmt() != null){
 
         }
-
-        // insert
-        if(ctx.insert_stmt() != null){ return visitInsert_stmt(ctx.insert_stmt());}
 
         // select
         if(ctx.select_stmt() != null){
@@ -289,7 +289,7 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitDrop_table_stmt(SQLParser.Drop_table_stmtContext ctx){
-        String tableName = ctx.table_name().getText().toLowerCase();
+        String tableName = visitTable_name(ctx.table_name());
         Database db = manager.getCurrentDatabase();
         String msg = "Successfully dropped table: " + tableName + " in database: " + db.getName();
         try{
