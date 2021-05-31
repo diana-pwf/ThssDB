@@ -1,15 +1,12 @@
 package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.index.BPlusTree;
-import cn.edu.thssdb.query.Comparer;
-import cn.edu.thssdb.query.Condition;
-import cn.edu.thssdb.query.multipleCondition;
+import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.utils.Pair;
 
 import cn.edu.thssdb.helper.*;
 import cn.edu.thssdb.exception.*;
 
-import javax.lang.model.type.ArrayType;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -199,8 +196,12 @@ public class Table implements Iterable<Row> {
       value = null;
       for(int i = 0; i < columnsLen; i++){
         if(col.getName().compareTo(columnNames.get(i)) != 0) continue;
-        value = vp.getValue(col, values[i]);
-        break;
+        try {
+          value = vp.getValue(col, values[i]);
+          break;
+        } catch (Exception e){
+          throw e;
+        }
       }
       try{
         vp.checkValid(col, value);
@@ -218,7 +219,7 @@ public class Table implements Iterable<Row> {
    *  功能：提供待删除记录的主 entry，将对应记录自 index 中删除
    *  参数：entry为待删除记录的主 entry
    */
-  public void delete(Entry entry) {
+  public void deleteEntry(Entry entry) {
     try{
       lock.writeLock().lock();
       index.remove(entry);
@@ -236,13 +237,15 @@ public class Table implements Iterable<Row> {
    * @param condition: 删除条件
    */
 
-  //FIXME: use multipleCondition to delete
-  public void delete(Condition condition){
+  // FIXME: use multipleCondition to delete,
+  public String delete(MultipleCondition condition){
+    Integer count = 0;
     for(Row row : this){
-//      if(condition != null && condition.JudgeCondition(row) == false ) continue;
-     delete(row.getEntries().get(primaryIndex));
-
+      // if(condition != null && condition.JudgeMultipleCondition(new QueryRow(new MetaInfo())) == false ) continue;
+      deleteEntry(row.getEntries().get(primaryIndex));
+      ++count;
     }
+    return count.toString();
   }
 
   public void drop(){
@@ -293,7 +296,7 @@ public class Table implements Iterable<Row> {
    *  功能：将满足条件表达式的行的相应属性更新为相应的值
    *  返回值：向客户端说明执行情况
    */
-  public String update(String columnName, Comparer comparer, multipleCondition conditions) {
+  public String update(String columnName, Comparer comparer, MultipleCondition conditions) {
     return "";
   }
 

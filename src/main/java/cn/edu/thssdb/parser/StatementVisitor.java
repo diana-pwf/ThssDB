@@ -12,7 +12,6 @@ import cn.edu.thssdb.type.ComparatorType;
 import cn.edu.thssdb.type.ComparerType;
 import cn.edu.thssdb.type.ConditionType;
 
-import java.awt.image.AreaAveragingScaleFilter;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
@@ -314,9 +313,13 @@ public class StatementVisitor extends SQLBaseVisitor{
         return ctx.getText().toLowerCase();
     }
 
+    /**
+     * 执行数据插入指令
+     * @param ctx
+     * @return 返回插入执行成功信息或错误原因
+     */
     @Override
     public QueryResult visitInsert_stmt(SQLParser.Insert_stmtContext ctx){
-
         Database db = manager.getCurrentDatabase();
         // TODO: find out difference between toString() and getText()
         //       toString = '[' + getText() + ']' （貌似）
@@ -339,6 +342,7 @@ public class StatementVisitor extends SQLBaseVisitor{
             }
             for(String[] values: valueList){
                 try {
+                    // FIXME: 考虑在 Database 中增加 insert 接口？
                     table.insert(columnsName, values);
                 } catch (Exception e){
                     msg = e.getMessage();
@@ -356,6 +360,39 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         return new QueryResult(msg);
     }
+
+    /**
+     * 执行数据删除指令
+     * @param ctx
+     * @return 返回删除执行成功信息或错误原因
+     */
+    @Override
+    public QueryResult visitDelete_stmt(SQLParser.Delete_stmtContext ctx){
+        Database db = manager.getCurrentDatabase();
+        String tableName = visitTable_name(ctx.table_name());
+        Table table = db.getTable(tableName);
+        String msg = "";
+
+        // FIXME: naive delete without dealing with transaction and lock
+        MultipleCondition conditions = null;
+        if (ctx.K_WHERE() == null) {
+            try{
+                // FIXME: 考虑在 Database 中增加 delete 接口？
+                msg.concat("Successfully deleted " + table.delete(null) + " data from the table: " + tableName);
+            } catch (Exception e){
+                msg.concat(e.getMessage());
+            }
+        }else{
+            conditions = visitMultiple_condition(ctx.multiple_condition());
+            try{
+                msg.concat("Successfully deleted " + table.delete(conditions) + " data from the table: " + tableName);
+            } catch (Exception e){
+                msg.concat(e.getMessage());
+            }
+        }
+        return new QueryResult(msg);
+    }
+
 
     /**
      * 将输入的 entry value 变为一字符串列表
@@ -399,7 +436,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         boolean distinct = (ctx.K_DISTINCT() != null);
 
-        multipleCondition conditions = null;
+        MultipleCondition conditions = null;
         if (ctx.K_WHERE() != null) {
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
@@ -450,7 +487,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         Comparer comparer = visitExpression(ctx.expression());
 
-        multipleCondition conditions = null;
+        MultipleCondition conditions = null;
         if (ctx.K_WHERE() != null) {
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
@@ -463,10 +500,10 @@ public class StatementVisitor extends SQLBaseVisitor{
 
     /** 处理复合逻辑 **/
     @Override
-    public multipleCondition visitMultiple_condition(SQLParser.Multiple_conditionContext ctx) {
+    public MultipleCondition visitMultiple_condition(SQLParser.Multiple_conditionContext ctx) {
         // 单一条件
         if (ctx.condition() != null) {
-            return new multipleCondition(visitCondition(ctx.condition()));
+            return new MultipleCondition(visitCondition(ctx.condition()));
         }
 
         // 复合逻辑
@@ -477,7 +514,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         else if (ctx.OR() != null) {
             type = ConditionType.OR;
         }
-        return new multipleCondition(visitMultiple_condition(ctx.multiple_condition(0)),
+        return new MultipleCondition(visitMultiple_condition(ctx.multiple_condition(0)),
                 visitMultiple_condition(ctx.multiple_condition(1)), type);
     }
 

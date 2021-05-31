@@ -15,16 +15,16 @@ multiple_condition :
 import cn.edu.thssdb.type.ConditionType;
 import cn.edu.thssdb.type.ResultType;
 
-public class multipleCondition {
-    multipleCondition mLeft;
-    multipleCondition mRight;
+public class MultipleCondition {
+    MultipleCondition mLeft;
+    MultipleCondition mRight;
     ConditionType mType;
 
     boolean mSingle;
     Condition mSingleCondition;
 
     // construct with multiple condition
-    public multipleCondition(multipleCondition Left, multipleCondition Right, ConditionType type){
+    public MultipleCondition(MultipleCondition Left, MultipleCondition Right, ConditionType type){
         mLeft = Left;
         mRight = Right;
         mType = type;
@@ -32,12 +32,12 @@ public class multipleCondition {
     }
 
     // construct with single condition
-    public multipleCondition(Condition condition){
+    public MultipleCondition(Condition condition){
         mSingleCondition = condition;
         mSingle = true;
     }
 
-    ResultType JudgeMultipleCondition(QueryRow row){
+    public ResultType JudgeMultipleCondition(QueryRow row){
         // only one condition
         if(mSingle){
             if(mSingleCondition == null){

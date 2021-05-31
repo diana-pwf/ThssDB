@@ -1,11 +1,10 @@
 package cn.edu.thssdb.schema;
 
-import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.query.Comparer;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
-import cn.edu.thssdb.query.multipleCondition;
+import cn.edu.thssdb.query.MultipleCondition;
 import cn.edu.thssdb.type.ColumnType;
 
 import java.io.*;
@@ -84,7 +83,7 @@ public class Database {
     return null;
   }
 
-  public String update(String tableName, String columnName, Comparer comparer, multipleCondition conditions) {
+  public String update(String tableName, String columnName, Comparer comparer, MultipleCondition conditions) {
     Table table = getTable(tableName);
     return table.update(columnName, comparer, conditions);
   }
