@@ -444,10 +444,9 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         ArrayList<String> columnNames = new ArrayList<String>();
-
         int columnNum = ctx.result_column().size();
         for (int i = 0; i < columnNum; i++) {
-            String columnName = ctx.result_column(i).getText().toLowerCase();
+            String columnName = visitResult_column(ctx.result_column(i));
             if (columnName.equals("*")) {
                 columnNames.clear();
                 break;
@@ -478,6 +477,11 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // return null;
+    }
+
+    @Override
+    public String visitResult_column(SQLParser.Result_columnContext ctx){
+        return ctx.getText().toLowerCase();
     }
 
     /** 执行update指令 **/
