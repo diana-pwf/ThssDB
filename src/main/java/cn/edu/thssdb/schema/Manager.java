@@ -132,4 +132,12 @@ public class Manager {
     }
   }
 
+  public String ShowAllDatabases() {
+    StringBuilder result = new StringBuilder("Current databases:" + "\n");
+    for (Database database: databases.values()) {
+      result.append(database.showAllTables()).append("\n");
+    }
+    return result.toString();
+  }
+
 }

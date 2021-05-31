@@ -84,6 +84,11 @@ public class Database {
     return null;
   }
 
+  // TODO
+//  public String select(ArrayList<String> columnNames, QueryTable queryTable, multipleCondition conditions, boolean distinct) {
+//
+//  }
+
   public String update(String tableName, String columnName, Comparer comparer, multipleCondition conditions) {
     Table table = getTable(tableName);
     return table.update(columnName, comparer, conditions);
@@ -166,5 +171,20 @@ public class Database {
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  public String showTableMeta(String tableName) {
+    Table table = getTable(tableName);
+    return table.showMeta();
+  }
+
+  public String showAllTables() {
+    StringBuilder result = new StringBuilder("databaseName: " + this.name + "\n" + "\n");
+    for(Table table : tables.values()) {
+      if(table != null) {
+        result.append(table.showMeta()).append("\n");
+      }
+    }
+    return result.toString();
   }
 }

@@ -349,6 +349,18 @@ public class Table implements Iterable<Row> {
     return rows;
   }
 
+  public String showMeta() {
+    String schema = "columnName, columnType, primaryKeyIndex, isNull, maxLength";
+    StringBuilder result = new StringBuilder("tableName: " + tableName + "\n" + schema + "\n");
+    for(Column column : columns) {
+      if(column != null) {
+        result.append(column.toString()).append("\n");
+      }
+    }
+    return result.toString();
+  }
+
+
   private class TableIterator implements Iterator<Row> {
     private Iterator<Pair<Entry, Row>> iterator;
 
