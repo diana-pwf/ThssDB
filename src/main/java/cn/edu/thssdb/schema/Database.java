@@ -63,7 +63,6 @@ public class Database {
 
       // TODO: 取决于Table类中的drop函数实现
       // TODO: 可以再检查是否已删除表对应的记录文件
-      // TODO: 记得取消下方注释
       table.drop();
 
       table = null;
@@ -129,7 +128,7 @@ public class Database {
     }
   }
 
-  public void quit() throws IOException {
+  public void quit(){
     try {
       lock.writeLock().lock();
       for (Table table : tables.values()) {
@@ -137,7 +136,7 @@ public class Database {
       }
       persist();
     } catch (Exception e) {
-      throw e;
+      e.printStackTrace();
     } finally {
       lock.writeLock().unlock();
     }
@@ -151,7 +150,6 @@ public class Database {
 
       for (Table table: tables.values()) {
         dropTable(table.tableName);
-
       }
       // tables.clear();
       tables = null;
