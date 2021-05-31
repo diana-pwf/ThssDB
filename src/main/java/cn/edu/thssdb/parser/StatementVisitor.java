@@ -80,12 +80,6 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         }
 
-        // insert
-        if(ctx.insert_stmt() != null){
-            visitInsert_stmt(ctx.insert_stmt());
-            // return new QueryResult(msg);
-        }
-
         // select
         if(ctx.select_stmt() != null){
             return visitSelect_stmt(ctx.select_stmt());
@@ -433,12 +427,16 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // TODO: 考虑事务
+        /*
         try {
             return database.select(columnNames, the_query_table, conditions, distinct);
         } catch (Exception e) {
             QueryResult error_result = new QueryResult(e.toString());
             return error_result;
         }
+
+         */
+        return null;
     }
 
     /** 执行update指令 **/
@@ -446,9 +444,9 @@ public class StatementVisitor extends SQLBaseVisitor{
     public String visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
         Database database = manager.getCurrentDatabase();
 
-        String table_name = ctx.table_name().getText().toLowerCase();
+        String table_name = visitTable_name(ctx.table_name());
 
-        String column_name = ctx.column_name().getText().toLowerCase();
+        String column_name = visitColumn_name(ctx.column_name());
 
         Comparer comparer = visitExpression(ctx.expression());
 
