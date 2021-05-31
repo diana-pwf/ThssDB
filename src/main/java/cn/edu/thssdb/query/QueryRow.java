@@ -28,8 +28,8 @@ public class QueryRow extends Row {
      */
     QueryRow(ArrayList<MetaInfo> metaInfo , LinkedList<Row> rows){
         super();
-        metaInfo = new ArrayList<>();
-        metaInfo.addAll(metaInfo);
+        MetaInfoList = new ArrayList<>();
+        MetaInfoList.addAll(metaInfo);
         for(Row row:rows){
             entries.addAll(row.getEntries());
         }
