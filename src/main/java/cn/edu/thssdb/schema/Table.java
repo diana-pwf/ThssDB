@@ -130,7 +130,7 @@ public class Table implements Iterable<Row> {
       throw new SchemaLengthMismatchException(schemaLength, values.length, "value");
     }
 
-    ArrayList<Entry> rowEntries = new ArrayList<Entry>();
+    ArrayList<Entry> rowEntries = new ArrayList<>();
     Column col;
     Comparable value;
     ValueParser vp = new ValueParser();
@@ -153,11 +153,10 @@ public class Table implements Iterable<Row> {
   /**
    * 功能：给定一个 Column 列表和 String 列表，依 columns 和 values 的对应位置构建一个 ArrayList<Entry>
    *     之后传给 insert(ArrayList<Entry> entry_list) 真正进行插入
-   * @param columns: specifying 要插入的列
+   * @param columnNames: specifying 要插入的列
    * @param values: 要插入的值（以 String[] 传入）
    */
-
-  public void insert(ArrayList<Column> columns, String[] values){
+  public void insert(ArrayList<String> columnNames, String[] values){
     if(values == null){
       throw new OperateTableWithNullException("value");
     } else if(columns == null){
@@ -174,25 +173,30 @@ public class Table implements Iterable<Row> {
       throw new SchemaLengthMismatchException(columnsLen, valuesLen, "columns");
     }
 
-    // 检查是否有未定义 column 或有重复 column
-    for(Column column: columns){
-      if(this.columns.indexOf(column) < 0){
-        throw new ColumnNotExistException(databaseName, tableName, column.getName());
+    // 建立列名列表
+    ArrayList<String> names = new ArrayList<>();
+    for(int i = 0; i < columnsLen; i++){
+      names.add(this.columns.get(i).getName());
+    }
+    // 检查是否有重复 column 或有未定义 column
+    for(String name: columnNames){
+      int index = names.indexOf(name);
+      if(index < 0){
+        throw new ColumnNotExistException(databaseName, tableName, name);
       }
-      if(columns.indexOf(column) != columns.lastIndexOf(column)){
-        throw new DuplicateColumnException(column.getName());
+      if(index != columnNames.lastIndexOf(name)){
+        throw new DuplicateColumnException(name);
       }
     }
 
-    ArrayList<Entry> rowEntries = new ArrayList<Entry>();
-    int i = 0;
+    ArrayList<Entry> rowEntries = new ArrayList<>();
     Comparable value;
     ValueParser vp = new ValueParser();
 
     for(Column col : this.columns){
       value = null;
-      for(; i < columnsLen; i++){
-        if(col.compareTo(columns.get(i)) != 0) continue;
+      for(int i = 0; i < columnsLen; i++){
+        if(col.getName().compareTo(columnNames.get(i)) != 0) continue;
         value = vp.getValue(col, values[i]);
         break;
       }

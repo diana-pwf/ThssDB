@@ -5,7 +5,10 @@ import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.utils.Pair;
 
+import java.awt.image.AreaAveragingScaleFilter;
 import java.util.ArrayList;
 import java.util.StringJoiner;
 
@@ -45,7 +48,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         // use db
         if(ctx.use_db_stmt() != null){ return visitUse_db_stmt(ctx.use_db_stmt());}
 
-        // TODO: create table (because need to parse column)
+        // create table
         if(ctx.create_table_stmt() != null){ return visitCreate_table_stmt(ctx.create_table_stmt());}
 
         // drop table
@@ -71,10 +74,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // insert
-        if(ctx.insert_stmt() != null){
-            visitInsert_stmt(ctx.insert_stmt());
-            // return new QueryResult(msg);
-        }
+        if(ctx.insert_stmt() != null){ return visitInsert_stmt(ctx.insert_stmt());}
 
         // select
         if(ctx.select_stmt() != null){
@@ -116,7 +116,7 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitCreate_db_stmt(SQLParser.Create_db_stmtContext ctx){
-        String dbname = ctx.database_name().getText().toLowerCase();
+        String dbname = visitDatabase_name(ctx.database_name());
         String msg = "Successfully created database: " + dbname;
         try {
             manager.createDatabaseIfNotExists(dbname);
@@ -135,7 +135,7 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitDrop_db_stmt(SQLParser.Drop_db_stmtContext ctx){
-        String dbname = ctx.database_name().getText().toLowerCase();
+        String dbname = visitDatabase_name(ctx.database_name());
         String msg = "Successfully dropped database: " + dbname;
         try {
             manager.dropDatabase(dbname);
@@ -152,7 +152,7 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitUse_db_stmt(SQLParser.Use_db_stmtContext ctx){
-        String dbname = ctx.database_name().getText().toLowerCase();
+        String dbname = visitDatabase_name(ctx.database_name());
         String msg = "Successfully switch to database: " + dbname;
         try{
             manager.switchDatabase(dbname);
@@ -163,26 +163,124 @@ public class StatementVisitor extends SQLBaseVisitor{
     }
 
     /**
+     * 处理数据库名称格式
+     * @param ctx
+     * @return 返回转换成小写的数据库名称
+     */
+    @Override
+    public String visitDatabase_name(SQLParser.Database_nameContext ctx){
+        return ctx.getText().toLowerCase();
+    }
+
+    /**
      * 执行在当前数据库创建表的指令
      * @param ctx
      * @return 返回创建成功的信息或创建失败的原因
      */
     @Override
     public QueryResult visitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx){
-        String tableName = ctx.table_name().getText().toLowerCase();
+        String tableName = visitTable_name(ctx.table_name());
         Database db = manager.getCurrentDatabase();
         String msg = "Successfully created table: " + tableName + " in database: " + db.getName();
 
-        /*
+        // 建立列
+        ArrayList<Column> columnList = new ArrayList<>();
+        for(SQLParser.Column_defContext columnDefCtx: ctx.column_def()){
+            columnList.add(visitColumn_def(columnDefCtx));
+        }
+        Column[] columns = columnList.toArray(new Column[0]);
+
         try{
-            db.createTableIfNotExists();
+            db.createTableIfNotExists(tableName, columns);
         } catch (Exception e){
             msg = e.getMessage();
         }
 
-         */
         return new QueryResult(msg);
      }
+
+    /**
+     * 读取列定义中的“名字、类型和最大长度、是否为主键和非空的限制”
+     * @param ctx
+     * @return 返回重建的 Column
+     */
+    @Override
+    public Column visitColumn_def(SQLParser.Column_defContext ctx){
+        // 名字
+        String columnName = visitColumn_name(ctx.column_name());
+
+        // 类型和最大长度
+        Pair<ColumnType, Integer> columnType = visitType_name(ctx.type_name());
+
+        // 限制，TODO: 如果返回 null 则创建 exception
+        Pair<Integer, Boolean> columnConstraint = new Pair<>(0, false);
+        for(SQLParser.Column_constraintContext constraintCtx: ctx.column_constraint()){
+            Pair<Integer, Boolean> constraint = visitColumn_constraint(constraintCtx);
+            if(constraint == null){
+                // TODO: throw new Exception
+            }
+            if(constraint.left == 1) columnConstraint.left = 1;
+            if(constraint.right == true) columnConstraint.right = true;
+        }
+
+        return new Column(columnName, columnType.left, columnConstraint.left, columnConstraint.right, columnType.right);
+    }
+
+    /**
+     * 读取列名字并且改成 lowercase
+     * @param ctx
+     * @return
+     */
+    @Override
+    public String visitColumn_name(SQLParser.Column_nameContext ctx){
+        return ctx.getText().toLowerCase();
+    }
+
+    /**
+     * 处理列定义中关于类型和限制长度的信息（只有在 ColumnType 为 String 时才需要设定，其他时候都默认为-1）
+     * @param ctx
+     * @return
+     */
+    @Override
+    public Pair<ColumnType, Integer> visitType_name(SQLParser.Type_nameContext ctx){
+        if(ctx.T_INT() != null) return new Pair<>(ColumnType.INT, -1);
+        if(ctx.T_LONG() != null) return new Pair<>(ColumnType.LONG, -1);
+        if(ctx.T_FLOAT() != null) return new Pair<>(ColumnType.FLOAT, -1);
+        if(ctx.T_DOUBLE() != null) return new Pair<>(ColumnType.DOUBLE, -1);
+        if(ctx.T_STRING() != null){
+            try{
+                return new Pair<>(ColumnType.STRING, Integer.parseInt(ctx.NUMERIC_LITERAL().getText()));
+            } catch (Exception e){
+                // TODO: 创建一种新的 Exception
+            }
+        }
+        return null;
+     }
+
+    /**
+     * 根据 K_PRIMARY 和 K_NULL ，优先级：主键约束大于非空约束（因为主键必要求非空）
+     * @param ctx
+     * @return 返回是否列约束
+     */
+    @Override
+    public Pair<Integer, Boolean> visitColumn_constraint(SQLParser.Column_constraintContext ctx){
+        if(ctx.K_PRIMARY() != null || ctx.K_KEY() != null){
+            if(ctx.K_PRIMARY() != null && ctx.K_KEY() != null) return new Pair<>(1, true);
+            // 解析错误
+            return null;
+        }
+        if(ctx.K_NOT() != null || ctx.K_NULL() != null){
+            if(ctx.K_NOT() != null && ctx.K_NULL() != null) return new Pair<>(0, true);
+            // 解析错误
+            return null;
+        }
+        return new Pair<>(0, false);
+    }
+
+    // FIXME: 搞清楚 visitTable_constraint 在干嘛
+    // @Override
+    // public visitTable_constraint
+
 
     /**
      * 执行在当前数据库删除表的指令
@@ -202,32 +300,57 @@ public class StatementVisitor extends SQLBaseVisitor{
         return new QueryResult(msg);
     }
 
+    /**
+     * 处理表名称格式
+     * @param ctx
+     * @return 返回转换成小写的表名称
+     */
     @Override
-    public String visitInsert_stmt(SQLParser.Insert_stmtContext ctx){
-        // 
-        Database db = manager.getCurrentDatabase();
-        // TODO: find out difference between toString() and getText()
-        //       toString = '[' + getText() + ']' （貌似）
-        Table table = db.getTable(ctx.table_name().getText().toLowerCase());
-
-        // FIXME: naive insert without dealing with transaction and lock
-
-        if(ctx.column_name() != null){
-            ArrayList<Column> columns = new ArrayList<Column>();
-
-        }else{
-
-        }
-        return "insert";
+    public String visitTable_name(SQLParser.Table_nameContext ctx){
+        return ctx.getText().toLowerCase();
     }
 
     @Override
-    public Column visitColumn_def(SQLParser.Column_defContext ctx){
+    public QueryResult visitInsert_stmt(SQLParser.Insert_stmtContext ctx){
 
-        String columnName = ctx.column_name().getText().toLowerCase();
+        Database db = manager.getCurrentDatabase();
+        // TODO: find out difference between toString() and getText()
+        //       toString = '[' + getText() + ']' （貌似）
+        String tableName = visitTable_name(ctx.table_name());
+        Table table = db.getTable(tableName);
+        String msg = "Successfully inserted data into the table: " + tableName + " in database: " + db.getName();
 
-        // TODO:
-        return null;
+        // FIXME: naive insert without dealing with transaction and lock
+        // 处理插入值
+        ArrayList<String[]> valueList = new ArrayList<>();
+        for(SQLParser.Value_entryContext valueEntryContext: ctx.value_entry()){
+            valueList.add(visitValue_entry(valueEntryContext));
+        }
+
+        // 根据是否指定插入列进行插入操作
+        if(ctx.column_name() != null){
+            ArrayList<String> columnsName = new ArrayList<>();
+            for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
+                columnsName.add(visitColumn_name(columnNameContext));
+            }
+            for(String[] values: valueList){
+                try {
+                    table.insert(columnsName, values);
+                } catch (Exception e){
+                    msg = e.getMessage();
+                }
+            }
+        }else{
+            for(String[] values: valueList){
+                try {
+                    table.insert(values);
+                } catch (Exception e){
+                    msg = e.getMessage();
+                }
+            }
+        }
+
+        return new QueryResult(msg);
     }
 
     /**

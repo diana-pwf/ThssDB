@@ -37,10 +37,10 @@ public class ValueParser {
             throw new NullValueException(column.getName());
         }
         // 检查最大长度限制
-        if(column.getType() == ColumnType.STRING){
+        if(value != null && column.getType() == ColumnType.STRING ){
             int maxLength = column.getMaxLength();
             int valLength = ((String)value).length();
-            if(value != null && maxLength > -1 && valLength > maxLength){
+            if(maxLength > -1 && valLength > maxLength){
                 throw new ValueExceedMaxLengthException(column.getName(), maxLength, valLength);
             }
         }
