@@ -24,7 +24,7 @@ public class multipleCondition {
     Condition mSingleCondition;
 
     // construct with multiple condition
-    multipleCondition(multipleCondition Left,multipleCondition Right,ConditionType type){
+    public multipleCondition(multipleCondition Left, multipleCondition Right, ConditionType type){
         mLeft = Left;
         mRight = Right;
         mType = type;
@@ -32,7 +32,7 @@ public class multipleCondition {
     }
 
     // construct with single condition
-    multipleCondition(Condition condition){
+    public multipleCondition(Condition condition){
         mSingleCondition = condition;
         mSingle = true;
     }

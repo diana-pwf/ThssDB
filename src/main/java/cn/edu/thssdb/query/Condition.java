@@ -37,7 +37,7 @@ public class Condition {
     Comparer mLeft;
     Comparer mRight;
     ComparatorType mType;
-    Condition(Comparer left,Comparer right,ComparatorType type){
+    public Condition(Comparer left, Comparer right, ComparatorType type){
         mLeft = left;
         mRight = right;
         mType = type;

@@ -20,7 +20,7 @@ import cn.edu.thssdb.type.ComparerType;
 public class Comparer {
     ComparerType mType;
     Comparable mValue;
-    Comparer(ComparerType type,String value){
+    public Comparer(ComparerType type, String value){
         mType = type;
         switch (type){
             case COLUMN:

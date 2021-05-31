@@ -1,12 +1,14 @@
 package cn.edu.thssdb.parser;
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
-import cn.edu.thssdb.query.QueryResult;
-import cn.edu.thssdb.query.QueryTable;
+import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.type.ComparatorType;
+import cn.edu.thssdb.type.ComparerType;
+import cn.edu.thssdb.type.ConditionType;
 
 import java.util.ArrayList;
 import java.util.StringJoiner;
@@ -276,7 +278,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         boolean distinct = (ctx.K_DISTINCT() != null);
 
-        Logic logic = null;
+        multipleCondition logic = null;
         if (ctx.K_WHERE() != null) {
             logic = visitMultiple_condition(ctx.multiple_condition());
         }
@@ -321,28 +323,106 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         String column_name = ctx.column_name().getText().toLowerCase();
 
-        Logic logic = null;
+        Comparer comparer = visitExpression(ctx.expression());
+
+        multipleCondition conditions = null;
         if (ctx.K_WHERE() != null) {
-            logic = visitMultiple_condition(ctx.multiple_condition());
+            conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
         // TODO: 读取Comparer变量
 
         // TODO: 考虑事务
 
-        return database.update(table_name, column_name, value, logic);
+        return database.update(table_name, column_name, comparer, conditions);
     }
 
 
     /** 处理复合逻辑 **/
-    public Logic visitMultiple_condition(SQLParser.Multiple_conditionContext ctx) {
-        // TODO： 单一条件
+    @Override
+    public multipleCondition visitMultiple_condition(SQLParser.Multiple_conditionContext ctx) {
+        // 单一条件
+        if (ctx.condition() != null) {
+            return new multipleCondition(visitCondition(ctx.condition()));
+        }
 
-        // TODO： 复合逻辑
-
+        // 复合逻辑
+        ConditionType type = null;
+        if (ctx.AND() != null) {
+            type = ConditionType.AND;
+        }
+        else if (ctx.OR() != null) {
+            type = ConditionType.OR;
+        }
+        return new multipleCondition(visitMultiple_condition(ctx.multiple_condition(0)),
+                visitMultiple_condition(ctx.multiple_condition(1)), type);
     }
 
-    public QueryTable visitTable_query() {
+    @Override
+    public Condition visitCondition(SQLParser.ConditionContext ctx) {
+        Comparer left = visitExpression(ctx.expression(0));
+        Comparer right = visitExpression(ctx.expression(0));
+        ComparatorType type = visitComparator(ctx.comparator());
+        return new Condition(left, right, type);
+    }
+
+    @Override
+    public Comparer visitExpression(SQLParser.ExpressionContext ctx) {
+        if (ctx.comparer() != null) {
+            return visitComparer(ctx.comparer());
+        }
+        return null;
+    }
+
+    @Override
+    public Comparer visitComparer(SQLParser.ComparerContext ctx) {
+        if (ctx.column_full_name() != null) {
+            return new Comparer(ComparerType.COLUMN, ctx.column_full_name().getText());
+        }
+
+        ComparerType literalType = visitLiteralType(ctx.literal_value());
+        String literalValue = ctx.literal_value().getText();
+        return new Comparer(literalType, literalValue);
+    }
+
+    public ComparerType visitLiteralType(SQLParser.Literal_valueContext ctx) {
+        if (ctx.NUMERIC_LITERAL() != null) {
+            return ComparerType.NUMERIC;
+        }
+        else if (ctx.STRING_LITERAL() != null) {
+            return ComparerType.STRING;
+        }
+        else if (ctx.K_NULL() != null)
+        {
+            return ComparerType.NULL;
+        }
+        return null;
+    }
+
+    @Override
+    public ComparatorType visitComparator(SQLParser.ComparatorContext ctx) {
+        if (ctx.EQ() != null) {
+            return ComparatorType.EQ;
+        }
+        else if (ctx.GE() != null) {
+            return ComparatorType.GE;
+        }
+        else if (ctx.GT() != null) {
+            return ComparatorType.GT;
+        }
+        else if (ctx.LE() != null) {
+            return ComparatorType.LE;
+        }
+        else if (ctx.LT() != null) {
+            return ComparatorType.LT;
+        }
+        else if (ctx.NE() != null) {
+            return ComparatorType.NE;
+        }
+        return null;
+    }
+
+    public QueryTable visitQueryTable() {
         // TODO: 单一表
 
         // TODO: 处理复合逻辑
