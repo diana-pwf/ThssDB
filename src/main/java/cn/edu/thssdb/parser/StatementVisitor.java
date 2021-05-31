@@ -87,7 +87,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // update
         if(ctx.update_stmt() != null){
-            return visitUpdate_stmt(ctx.update_stmt());
+            return new QueryResult(visitUpdate_stmt(ctx.update_stmt()));
         }
 
         //
@@ -278,9 +278,9 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         boolean distinct = (ctx.K_DISTINCT() != null);
 
-        multipleCondition logic = null;
+        multipleCondition conditions = null;
         if (ctx.K_WHERE() != null) {
-            logic = visitMultiple_condition(ctx.multiple_condition());
+            conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
         ArrayList<String> columnNames = new ArrayList<String>();
@@ -307,7 +307,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // TODO: 考虑事务
         try {
-            return database.select(columnNames, the_query_table, logic, distinct);
+            return database.select(columnNames, the_query_table, conditions, distinct);
         } catch (Exception e) {
             QueryResult error_result = new QueryResult(e.toString());
             return error_result;
@@ -316,7 +316,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
     /** 执行update指令 **/
     @Override
-    public QueryResult visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
+    public String visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
         Database database = manager.getCurrentDatabase();
 
         String table_name = ctx.table_name().getText().toLowerCase();
@@ -329,8 +329,6 @@ public class StatementVisitor extends SQLBaseVisitor{
         if (ctx.K_WHERE() != null) {
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
-
-        // TODO: 读取Comparer变量
 
         // TODO: 考虑事务
 

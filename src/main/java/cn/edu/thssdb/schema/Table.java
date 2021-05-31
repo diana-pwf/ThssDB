@@ -1,7 +1,9 @@
 package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.index.BPlusTree;
+import cn.edu.thssdb.query.Comparer;
 import cn.edu.thssdb.query.Condition;
+import cn.edu.thssdb.query.multipleCondition;
 import cn.edu.thssdb.utils.Pair;
 
 import cn.edu.thssdb.helper.*;
@@ -279,6 +281,18 @@ public class Table implements Iterable<Row> {
       lock.writeLock().unlock();
     }
   }
+
+
+  /**
+   *  TODO:
+   *  参数：columnName为要更新的那一列的属性名称，comparer为待更新的值， conditions为where后所接的条件表达式
+   *  功能：将满足条件表达式的行的相应属性更新为相应的值
+   *  返回值：向客户端说明执行情况
+   */
+  public String update(String columnName, Comparer comparer, multipleCondition conditions) {
+    return "";
+  }
+
 
   private void recover() {
     File file = new File("DATA/"+this.databaseName+'_'+this.tableName+".data");
