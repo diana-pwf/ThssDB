@@ -17,7 +17,7 @@ import java.util.LinkedList;
 // 同时增加calColumnComparer来计算table.column的值->同样需要column和table的对应关系
 public class QueryRow extends Row {
     private ArrayList<MetaInfo> MetaInfoList;
-    QueryRow(MetaInfo metaInfo, Row row){
+    public QueryRow(MetaInfo metaInfo, Row row){
         super();
         MetaInfoList = new ArrayList<>();
         MetaInfoList.add(metaInfo);
@@ -29,7 +29,7 @@ public class QueryRow extends Row {
      * @param metaInfo 与row对应的table的信息
      * @param rows 与metaInfo的table对应，采用LinkedList是因为在QueryTable中使用LinkedList更易于实现队列，笛卡尔积
      */
-    QueryRow(ArrayList<MetaInfo> metaInfo , LinkedList<Row> rows){
+    public QueryRow(ArrayList<MetaInfo> metaInfo , LinkedList<Row> rows){
         super();
         MetaInfoList = new ArrayList<>();
         MetaInfoList.addAll(metaInfo);

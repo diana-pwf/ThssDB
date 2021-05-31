@@ -12,7 +12,7 @@ class MetaInfo {
   private List<Column> columns;
   private String databaseName;
 
-  MetaInfo(String databaseName,String tableName, ArrayList<Column> columns) {
+  public MetaInfo(String databaseName,String tableName, ArrayList<Column> columns) {
     this.tableName = tableName;
     this.columns = columns;
     this.databaseName = databaseName;
