@@ -23,12 +23,11 @@ public class QueryRow extends Row {
         MetaInfoList.add(metaInfo);
         entries.addAll(row.getEntries());
     }
-    // 此处采用LinkedList是因为在QueryTable中使用LinkedList更易于实现队列，笛卡尔积
-    // tables和rows应该是对应的关系
 
     /**
      *  构造QueryRow
      * @param metaInfo 与row对应的table的信息
+     * @param rows 与metaInfo的table对应，采用LinkedList是因为在QueryTable中使用LinkedList更易于实现队列，笛卡尔积
      */
     QueryRow(ArrayList<MetaInfo> metaInfo , LinkedList<Row> rows){
         super();
