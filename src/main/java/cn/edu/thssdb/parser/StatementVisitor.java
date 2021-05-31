@@ -1,6 +1,8 @@
 package cn.edu.thssdb.parser;
 
+import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.query.QueryResult;
+import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
@@ -78,12 +80,12 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // select
         if(ctx.select_stmt() != null){
-
+            return visitSelect_stmt(ctx.select_stmt());
         }
 
         // update
         if(ctx.update_stmt() != null){
-
+            return visitUpdate_stmt(ctx.update_stmt());
         }
 
         //
@@ -209,9 +211,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         // TODO: find out difference between toString() and getText()
         //       toString = '[' + getText() + ']' （貌似）
         Table table = db.getTable(ctx.table_name().getText().toLowerCase());
-    public String visitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
-        return "qwq";
-    }
+
 
 
         // FIXME: naive insert without dealing with transaction and lock
@@ -263,5 +263,88 @@ public class StatementVisitor extends SQLBaseVisitor{
             msg = e.getMessage();
         }
         return new QueryResult(msg);
+    }
+
+    /** 执行select指令 **/
+    @Override
+    public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx){
+
+        Database database = manager.getCurrentDatabase();
+        if(database == null) {
+            throw new DatabaseNotExistException();
+        }
+
+        boolean distinct = (ctx.K_DISTINCT() != null);
+
+        Logic logic = null;
+        if (ctx.K_WHERE() != null) {
+            logic = visitMultiple_condition(ctx.multiple_condition());
+        }
+
+        ArrayList<String> columnNames = new ArrayList<String>();
+
+        int columnNum = ctx.result_column().size();
+        for (int i = 0; i < columnNum; i++) {
+            String columnName = ctx.result_column(i).getText().toLowerCase();
+            if (columnName.equals("*")) {
+                columnNames.clear();
+                break;
+            }
+            columnNames.add(columnName);
+        }
+
+        // TODO: 读取QueryTable变量
+
+        int tableNum = ctx.table_query().size();
+        if (tableNum == 0) {
+            // TODO: 抛异常
+        }
+        for (int i = 0; i < tableNum; i++) {
+
+        }
+
+        // TODO: 考虑事务
+        try {
+            return database.select(columnNames, the_query_table, logic, distinct);
+        } catch (Exception e) {
+            QueryResult error_result = new QueryResult(e.toString());
+            return error_result;
+        }
+    }
+
+    /** 执行update指令 **/
+    @Override
+    public QueryResult visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
+        Database database = manager.getCurrentDatabase();
+
+        String table_name = ctx.table_name().getText().toLowerCase();
+
+        String column_name = ctx.column_name().getText().toLowerCase();
+
+        Logic logic = null;
+        if (ctx.K_WHERE() != null) {
+            logic = visitMultiple_condition(ctx.multiple_condition());
+        }
+
+        // TODO: 读取Comparer变量
+
+        // TODO: 考虑事务
+
+        return database.update(table_name, column_name, value, logic);
+    }
+
+
+    /** 处理复合逻辑 **/
+    public Logic visitMultiple_condition(SQLParser.Multiple_conditionContext ctx) {
+        // TODO： 单一条件
+
+        // TODO： 复合逻辑
+
+    }
+
+    public QueryTable visitTable_query() {
+        // TODO: 单一表
+
+        // TODO: 处理复合逻辑
     }
 }
