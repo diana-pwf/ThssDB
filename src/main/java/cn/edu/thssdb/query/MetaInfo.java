@@ -27,6 +27,13 @@ class MetaInfo {
     return -1;
   }
 
+  public String getColumnName(int idx){
+    if(idx<0||idx>columns.size()){
+      return null;
+    }
+    return tableName+"."+columns.get(idx).getName();
+  }
+
   public ColumnType columnFindType(int idx){
     return columns.get(idx).getType();
   }

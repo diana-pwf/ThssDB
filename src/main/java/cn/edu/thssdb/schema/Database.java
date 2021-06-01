@@ -77,9 +77,9 @@ public class Database {
 
   }
 
-  public String select(QueryTable[] queryTables) {
+  public String select(QueryTable queryTable) {
     // TODO
-    QueryResult queryResult = new QueryResult(queryTables);
+    QueryResult queryResult = new QueryResult(queryTable,null,false);
     return null;
   }
 

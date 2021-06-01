@@ -1,7 +1,13 @@
 package cn.edu.thssdb.query;
 
+import cn.edu.thssdb.exception.IllegalSQLStatement;
+import cn.edu.thssdb.exception.QueryColumnCollisionException;
+import cn.edu.thssdb.exception.QueryColumnNotFoundException;
+import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.type.ComparerType;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -45,4 +51,5 @@ public abstract class QueryTable implements Iterator<Row> {
     }
     return row;
   }
+
 }

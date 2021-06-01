@@ -48,7 +48,7 @@ public class MultipleCondition {
                 return mSingleCondition.JudgeCondition(row);
             }
         }
-        //TODO: the visitor function should assure that mLeft and mRight exists
+        // TODO: the visitor function should assure that mLeft and mRight exists
         assert mLeft!=null && mRight!=null;
         ResultType mLeftType = mLeft.JudgeMultipleCondition(row);
         ResultType mRightType = mRight.JudgeMultipleCondition(row);
