@@ -10,7 +10,7 @@ import java.util.LinkedList;
 public abstract class QueryTable implements Iterator<Row> {
   LinkedList<QueryRow> queue;
   ArrayList<MetaInfo> MetaInfoList;
-  MultipleCondition selectLogic;
+  MultipleCondition selectCondition;
   boolean init;
 
   public abstract void addNext();
@@ -18,6 +18,9 @@ public abstract class QueryTable implements Iterator<Row> {
   QueryTable() {
     queue = new LinkedList<QueryRow>();
     init = true;
+  }
+  public void setSelectCondition(MultipleCondition Condition){
+    this.selectCondition = Condition;
   }
 
   @Override

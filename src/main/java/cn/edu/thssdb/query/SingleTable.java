@@ -15,6 +15,7 @@ public class SingleTable extends QueryTable{
     SingleTable(Table table){
         this.table = table;
         this.iterators = table.iterator();
+        createMetaInfo();
     }
 
 
@@ -24,16 +25,16 @@ public class SingleTable extends QueryTable{
 
     @Override
     public void addNext() {
-        if(this.selectLogic==null){
+        if(this.selectCondition==null){
             addNextDirect();
             return;
         }
-        if(this.selectLogic.mSingle){
-            if(this.selectLogic.mSingleCondition==null){
+        if(this.selectCondition.mSingle){
+            if(this.selectCondition.mSingleCondition==null){
                 addNextDirect();
                 return;
             }
-            Condition cond = this.selectLogic.mSingleCondition;
+            Condition cond = this.selectCondition.mSingleCondition;
             if(cond.mLeft.mType!= ComparerType.COLUMN && cond.mRight.mType!=ComparerType.COLUMN){
                 if(cond.JudgeCondition()== ResultType.TRUE){
                     addNextDirect();
@@ -54,14 +55,14 @@ public class SingleTable extends QueryTable{
 //                }
 //            }
         }
-        addNextByLogic();
+        addNextByCondition();
 
     }
 
-    private void addNextByLogic() {
+    private void addNextByCondition() {
         while(iterators.hasNext()){
              QueryRow row = new QueryRow(MetaInfoList.get(0),iterators.next());
-             if(selectLogic.JudgeMultipleCondition(row)==ResultType.TRUE){
+             if(selectCondition.JudgeMultipleCondition(row)==ResultType.TRUE){
                  queue.add(row);
                  break;
              }

@@ -38,6 +38,7 @@ public class MultipleCondition {
     }
 
     public ResultType JudgeMultipleCondition(QueryRow row){
+        // Todo:需要保证multipleCondition != null
         // only one condition
         if(mSingle){
             if(mSingleCondition == null){
