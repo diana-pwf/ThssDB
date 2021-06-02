@@ -22,7 +22,7 @@ public class QueryResult {
   private String message;
   private QueryTable table;
   private ArrayList<Integer> columnSelectIdx;
-  private ArrayList<String> columnSelectName;
+  public ArrayList<String> columnSelectName;
   private ArrayList<Row> result;
   private boolean selectDistinct;
   private HashSet<String> rowHashSet;

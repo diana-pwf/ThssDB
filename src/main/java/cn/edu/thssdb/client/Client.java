@@ -167,6 +167,7 @@ public class Client {
             println();
           }
         }
+        // 否则：直接打印响应中列表中的结果
         else {
           for (String item: executeStatementResp.columnsList) {
             // TODO: 对事务相关指令的处理
