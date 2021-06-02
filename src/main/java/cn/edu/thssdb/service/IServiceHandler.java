@@ -99,6 +99,11 @@ public class IServiceHandler implements IService.Iface {
     }
 
     // TODO: 将queryResults中的结果加入resp
+    if (queryResults.size() == 0) {
+      resp.addToColumnsList("null");
+    }
+
+
 
     resp.setStatus(new Status(Global.SUCCESS_CODE));
     resp.setIsAbort(false);

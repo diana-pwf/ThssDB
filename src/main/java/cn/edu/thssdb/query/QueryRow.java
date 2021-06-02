@@ -33,7 +33,7 @@ public class QueryRow extends Row {
         super();
         MetaInfoList = new ArrayList<>();
         MetaInfoList.addAll(metaInfo);
-        for(Row row:rows){
+        for(Row row:rows) {
             entries.addAll(row.getEntries());
         }
     }
