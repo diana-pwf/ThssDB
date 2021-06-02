@@ -2,6 +2,7 @@ package cn.edu.thssdb.service;
 
 import cn.edu.thssdb.parser.SQLLexer;
 import cn.edu.thssdb.parser.SQLParser;
+import cn.edu.thssdb.parser.StatementErrorListener;
 import cn.edu.thssdb.parser.StatementVisitor;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.rpc.thrift.ConnectReq;
@@ -91,7 +92,8 @@ public class IServiceHandler implements IService.Iface {
         continue;
       }
 
-      String command = statement.split(" ")[0];
+      // TODO: 可以对空白符做一些处理
+      String command = statement;
       // TODO: 考虑事务
       ArrayList<QueryResult> result = handleCommand(command, req.sessionId, manager);
       queryResults.addAll(result);
@@ -117,7 +119,7 @@ public class IServiceHandler implements IService.Iface {
         resp.addToColumnsList(columnName);
       }
     }
-    // 情况3：存在异常
+    // 情况3：存在异常或只需要返回信息
     else {
       for (QueryResult resultItem : queryResults) {
         if (resultItem == null) {
@@ -140,10 +142,14 @@ public class IServiceHandler implements IService.Iface {
   public ArrayList<QueryResult> handleCommand(String command, long sessionId, Manager manager) {
     //词法分析
     SQLLexer lexer = new SQLLexer(CharStreams.fromString(command));
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(StatementErrorListener.instance);
     CommonTokenStream tokens = new CommonTokenStream(lexer);
 
     //句法分析
     SQLParser parser = new SQLParser(tokens);
+    parser.removeErrorListeners();
+    parser.addErrorListener(StatementErrorListener.instance);
 
     //语义分析
     try {
