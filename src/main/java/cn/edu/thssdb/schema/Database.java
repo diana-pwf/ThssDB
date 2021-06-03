@@ -41,6 +41,7 @@ public class Database {
       }
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -71,6 +72,7 @@ public class Database {
 
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -134,7 +136,7 @@ public class Database {
     }
   }
 
-  public void quit(){
+  public void quit() throws IOException {
     try {
       lock.writeLock().lock();
       for (Table table : tables.values()) {
@@ -143,6 +145,7 @@ public class Database {
       persist();
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -162,6 +165,7 @@ public class Database {
 
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
