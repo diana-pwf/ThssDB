@@ -33,12 +33,12 @@ public class Table implements Iterable<Row> {
   public ArrayList<Entry> entries;
 
   public Table(String databaseName, String tableName, Column[] columns) {
+    this.lock = new ReentrantReadWriteLock();
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.columns = new ArrayList<>(Arrays.asList(columns));
     this.schemaLength = this.columns.size();
     this.index = new BPlusTree<>();
-    this.lock = new ReentrantReadWriteLock();
     // 记录 primary key 的位置 primary index
     for (int i = 0; i < this.columns.size(); i++)
     {
@@ -47,7 +47,7 @@ public class Table implements Iterable<Row> {
         break;
       }
     }
-    this.lock = new ReentrantReadWriteLock();
+    this.entries = new ArrayList<>();
   }
 
   private void checkNull(ArrayList<Column> columns, ArrayList<Entry> entries){

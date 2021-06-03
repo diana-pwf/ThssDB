@@ -44,6 +44,7 @@ public class Manager {
       }
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -64,6 +65,7 @@ public class Manager {
 
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -83,6 +85,7 @@ public class Manager {
 
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.readLock().unlock();
     }
