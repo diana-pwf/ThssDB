@@ -69,13 +69,11 @@ public class Table implements Iterable<Row> {
    *  参数：entry为待查询记录的主 entry
    */
   public Row getRow(Entry entry){
-    Row row;
     try{
-      row = index.get(entry);
+      return index.get(entry);
     }catch (Exception e){
       throw e;
     }
-    return row;
   }
 
   /**
@@ -86,6 +84,7 @@ public class Table implements Iterable<Row> {
   public void insertEntries(ArrayList<Entry> entryList) {
     try{
       lock.writeLock().lock();
+      // put 里面自己有检测 duplicated key
       index.put(entryList.get(primaryIndex), new Row(entryList.toArray(new Entry[0])));
       entries.add(entryList.get(primaryIndex));
     }catch (Exception e){
@@ -171,8 +170,8 @@ public class Table implements Iterable<Row> {
     for(Column col : this.columns){
       int index = columnsName.indexOf(col.getName());
       value = null;
+      // 当前列被指定
       if(index > -1){
-        // 当前列被指定
         try {
           value = vp.getValue(col, values[index]);
         } catch (Exception e){
@@ -186,7 +185,6 @@ public class Table implements Iterable<Row> {
         throw e;
       }
     }
-
     insertEntries(rowEntries);
   }
 
@@ -241,18 +239,8 @@ public class Table implements Iterable<Row> {
    *  功能：提供待修改记录的主 entry，将根据传入参数修改 row
    *  参数：entry为待修改记录的主 entry，columns 和 entries 是要修改的对应属性和值
    */
+  /*
   public void update(Entry primaryEntry, ArrayList<Column> columns, ArrayList<Entry> entries) {
-    // check whether there is null columns or entries
-    // check whether the length of columns and entries is preferable
-    /*
-    try{
-      checkNull(columns, entries);
-      checkLen(columns, entries, false);
-    }catch (Exception e){
-      throw e;
-    }
-    */
-
     Row row = this.getRow(primaryEntry);
     int columnsLen = columns.size();
     int schemaIndex = 0, columnIndex = 0;
@@ -273,6 +261,8 @@ public class Table implements Iterable<Row> {
     }
   }
 
+   */
+
 
   /**
    *  TODO:
@@ -282,20 +272,54 @@ public class Table implements Iterable<Row> {
    */
   public String update(String columnName, Comparer comparer, MultipleCondition conditions) {
     Integer count = 0;
+    // 取得修改的位置
+    int index = this.columnsName.indexOf(columnName);
+    // 没有找到对应列
+    if(index < 0){
+      throw new ColumnNotExistException(databaseName, tableName, columnName);
+    }
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
       if(conditions != null && conditions.JudgeMultipleCondition(queryRow) == ResultType.FALSE ) continue;
       // 取得主键
       Entry entry = queryRow.getEntries().get(primaryIndex);
-      int index = this.columnsName.indexOf(columnName);
-      // 没有找到对应列
-      if(index < 0){
-        // TODO: throw column not find exception
-      }
-      Column column = this.columns.get(index);
-      // FIXME: not yet finished
 
+      // 取得旧行并构建新行
+      Row oldRow = getRow(entry);
+      Column column = this.columns.get(index);
+      ValueParser vp = new ValueParser();
+      // FIXME: 暂时测试用，需要重载 getValue for comparer
+      Comparable newValue = 100;
+      Comparable oldValue = oldRow.getEntries().get(index).value;
+      try {
+        // TODO: add getValue for comparer
+        // value = vp.getValue(column, )
+        // vp.checkValid(column, value);
+      } catch (Exception e){
+        throw e;
+      }
+      Row newRow = new Row(oldRow.getEntries().toArray(new Entry[0]));
+      newRow.getEntries().get(index).value = newValue;
+
+      // 分为是否更新主键有不同操作
+      if(column.isPrimary() && oldValue != newValue){
+        try{
+          // 先插入，检查是否有冲突
+          insertEntries(newRow.getEntries());
+          // 没有冲突才更新 entries
+          entries.remove(entry);
+          entries.add(newRow.getEntries().get(primaryIndex));
+        } catch (Exception e){
+          throw e;
+        }
+      }else {
+        try {
+          this.index.update(entry, newRow);
+        } catch (Exception e) {
+          throw e;
+        }
+      }
       ++count;
     }
 
