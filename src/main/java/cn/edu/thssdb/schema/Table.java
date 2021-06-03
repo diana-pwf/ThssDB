@@ -2,6 +2,7 @@ package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.index.BPlusTree;
 import cn.edu.thssdb.query.*;
+import cn.edu.thssdb.type.ResultType;
 import cn.edu.thssdb.utils.Pair;
 
 import cn.edu.thssdb.helper.*;
@@ -241,8 +242,14 @@ public class Table implements Iterable<Row> {
   public String delete(MultipleCondition condition){
     Integer count = 0;
     for(Row row : this){
-      // if(condition != null && condition.JudgeMultipleCondition(new QueryRow(new MetaInfo())) == false ) continue;
-      deleteEntry(row.getEntries().get(primaryIndex));
+      MetaInfo info = new MetaInfo(databaseName, tableName, columns);
+      QueryRow queryRow = new QueryRow(info, row);
+      if(condition != null && condition.JudgeMultipleCondition(queryRow) == ResultType.FALSE ) continue;
+      try{
+        deleteEntry(row.getEntries().get(primaryIndex));
+      } catch(Exception e){
+        throw e;
+      }
       ++count;
     }
     return count.toString();
