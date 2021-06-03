@@ -27,6 +27,8 @@ public class Table implements Iterable<Row> {
   public String databaseName;
   public String tableName;
   public ArrayList<Column> columns;
+  // 列名列表
+  private ArrayList<String> columnsName;
   public int schemaLength;
   public BPlusTree<Entry, Row> index;
   private int primaryIndex;
@@ -37,6 +39,10 @@ public class Table implements Iterable<Row> {
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.columns = new ArrayList<>(Arrays.asList(columns));
+    this.columnsName = new ArrayList<>();
+    for(Column column: this.columns){
+      this.columnsName.add(column.getName());
+    }
     this.schemaLength = this.columns.size();
     this.index = new BPlusTree<>();
     // 记录 primary key 的位置 primary index
@@ -59,33 +65,6 @@ public class Table implements Iterable<Row> {
   }
 
   /**
-   * FIXME: redundant
-   * @param columns
-   * @param entries
-   * @param equal
-   */
-  private void checkLen(ArrayList<Column> columns, ArrayList<Entry> entries, boolean equal){
-    int columnsLen = columns.size();
-    int entriesLen = entries.size();
-    if(equal){
-      if(columnsLen != schemaLength){
-        throw new SchemaLengthMismatchException(schemaLength, columnsLen, "columns");
-      }else if(entriesLen != schemaLength){
-        throw new SchemaLengthMismatchException(schemaLength, entriesLen, "entries");
-      }
-    }else{
-      if(columnsLen > schemaLength){
-        throw new ExceedSchemaLengthException(schemaLength, columnsLen, "columns");
-      }else if(entriesLen > schemaLength) {
-        throw new ExceedSchemaLengthException(schemaLength, entriesLen, "entries");
-      }else if(columnsLen != entriesLen){
-        throw new SchemaLengthMismatchException(columnsLen, entriesLen, "columns");
-      }
-    }
-  }
-
-
-  /**
    *  功能：传入欲查询记录主 entry，返回对应的一行记录
    *  参数：entry为待查询记录的主 entry
    */
@@ -101,14 +80,14 @@ public class Table implements Iterable<Row> {
 
   /**
    * 功能：给定一个 ArrayList<Entry>，实际将数据插入表中
-   * @param entry_list
-   * TODO: 页式存储修改
+   * @param entryList
+   * TODO: 页式存储修改时应该只需要修改这部分。
    */
-  public void insert(ArrayList<Entry> entry_list) {
+  public void insertEntries(ArrayList<Entry> entryList) {
     try{
       lock.writeLock().lock();
-      index.put(entry_list.get(primaryIndex), new Row(entry_list.toArray(new Entry[0])));
-      entries.add(entry_list.get(primaryIndex));
+      index.put(entryList.get(primaryIndex), new Row(entryList.toArray(new Entry[0])));
+      entries.add(entryList.get(primaryIndex));
     }catch (Exception e){
       throw e;
     }finally{
@@ -147,23 +126,23 @@ public class Table implements Iterable<Row> {
       }
     }
 
-    insert(rowEntries);
+    insertEntries(rowEntries);
   }
 
   /**
    * 功能：给定一个 Column 列表和 String 列表，依 columns 和 values 的对应位置构建一个 ArrayList<Entry>
    *     之后传给 insert(ArrayList<Entry> entry_list) 真正进行插入
-   * @param columnNames: specifying 要插入的列
+   * @param columnsName: specifying 要插入的列
    * @param values: 要插入的值（以 String[] 传入）
    */
-  public void insert(ArrayList<String> columnNames, String[] values){
+  public void insert(ArrayList<String> columnsName, String[] values){
     if(values == null){
       throw new OperateTableWithNullException("value");
     } else if(columns == null){
       throw new OperateTableWithNullException("column");
     }
 
-    int columnsLen = columns.size();
+    int columnsLen = columnsName.size();
     int valuesLen = values.length;
     if(columnsLen > schemaLength){
       throw new ExceedSchemaLengthException(schemaLength, columnsLen, "columns");
@@ -173,18 +152,13 @@ public class Table implements Iterable<Row> {
       throw new SchemaLengthMismatchException(columnsLen, valuesLen, "columns");
     }
 
-    // 建立列名列表
-    ArrayList<String> names = new ArrayList<>();
-    for(int i = 0; i < columnsLen; i++){
-      names.add(this.columns.get(i).getName());
-    }
-    // 检查是否有重复 column 或有未定义 column
-    for(String name: columnNames){
-      int index = names.indexOf(name);
+    // 检查是否有未定义 column 或重复 column
+    for(String name: columnsName){
+      int index = this.columnsName.indexOf(name);
       if(index < 0){
         throw new ColumnNotExistException(databaseName, tableName, name);
       }
-      if(index != columnNames.lastIndexOf(name)){
+      if(index != this.columnsName.lastIndexOf(name)){
         throw new DuplicateColumnException(name);
       }
     }
@@ -193,13 +167,14 @@ public class Table implements Iterable<Row> {
     Comparable value;
     ValueParser vp = new ValueParser();
 
+    // 按表的列序构造 entry
     for(Column col : this.columns){
+      int index = columnsName.indexOf(col.getName());
       value = null;
-      for(int i = 0; i < columnsLen; i++){
-        if(col.getName().compareTo(columnNames.get(i)) != 0) continue;
+      if(index > -1){
+        // 当前列被指定
         try {
-          value = vp.getValue(col, values[i]);
-          break;
+          value = vp.getValue(col, values[index]);
         } catch (Exception e){
           throw e;
         }
@@ -212,7 +187,7 @@ public class Table implements Iterable<Row> {
       }
     }
 
-    insert(rowEntries);
+    insertEntries(rowEntries);
   }
 
 
@@ -252,9 +227,11 @@ public class Table implements Iterable<Row> {
       }
       ++count;
     }
+    // FIXME: change return value
     return count.toString();
   }
 
+  // TODO:
   public void drop(){
     
   }
@@ -304,6 +281,24 @@ public class Table implements Iterable<Row> {
    *  返回值：向客户端说明执行情况
    */
   public String update(String columnName, Comparer comparer, MultipleCondition conditions) {
+    Integer count = 0;
+    for(Row row : this){
+      MetaInfo info = new MetaInfo(databaseName, tableName, columns);
+      QueryRow queryRow = new QueryRow(info, row);
+      if(conditions != null && conditions.JudgeMultipleCondition(queryRow) == ResultType.FALSE ) continue;
+      // 取得主键
+      Entry entry = queryRow.getEntries().get(primaryIndex);
+      int index = this.columnsName.indexOf(columnName);
+      // 没有找到对应列
+      if(index < 0){
+        // TODO: throw column not find exception
+      }
+      Column column = this.columns.get(index);
+      // FIXME: not yet finished
+
+      ++count;
+    }
+
     return "";
   }
 
