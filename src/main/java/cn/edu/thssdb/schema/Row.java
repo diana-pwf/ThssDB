@@ -33,4 +33,13 @@ public class Row implements Serializable {
       sj.add(e.toString());
     return sj.toString();
   }
+
+  public ArrayList<String> toStringList() {
+    if (entries == null)
+      return new ArrayList<>();
+    ArrayList<String> resultList = new ArrayList<>();
+    for (Entry e : entries)
+      resultList.add(e.toString());
+    return resultList;
+  }
 }

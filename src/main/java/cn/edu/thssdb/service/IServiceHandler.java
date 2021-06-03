@@ -2,6 +2,7 @@ package cn.edu.thssdb.service;
 
 import cn.edu.thssdb.parser.SQLLexer;
 import cn.edu.thssdb.parser.SQLParser;
+import cn.edu.thssdb.parser.StatementErrorListener;
 import cn.edu.thssdb.parser.StatementVisitor;
 import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.rpc.thrift.ConnectReq;
@@ -15,6 +16,7 @@ import cn.edu.thssdb.rpc.thrift.GetTimeResp;
 import cn.edu.thssdb.rpc.thrift.IService;
 import cn.edu.thssdb.rpc.thrift.Status;
 import cn.edu.thssdb.schema.Manager;
+import cn.edu.thssdb.schema.Row;
 import cn.edu.thssdb.utils.Global;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -90,15 +92,45 @@ public class IServiceHandler implements IService.Iface {
         continue;
       }
 
-      String command = statement.split(" ")[0];
+      // TODO: 可以对空白符做一些处理
+      String command = statement;
       // TODO: 考虑事务
-
       ArrayList<QueryResult> result = handleCommand(command, req.sessionId, manager);
       queryResults.addAll(result);
 
     }
 
-    // TODO: 将queryResults中的结果加入resp
+    // 将queryResults中的结果加入resp
+
+    // 情况1：无任何查询结果
+    if (queryResults.size() == 0) {
+      resp.addToColumnsList("null");
+    }
+    // 情况2：只有一个查询 且 返回结果无异常
+    else if (queryResults.size() == 1 && queryResults.get(0) != null && queryResults.get(0).getIsQueryResult()) {
+      for (Row row : queryResults.get(0).getResult()) {
+        resp.addToRowList(row.toStringList());
+      }
+      // 查询结果为空 初始化响应的rowList为一个空数组
+      if (!resp.isSetRowList()) {
+        resp.rowList = new ArrayList<>();
+      }
+      for (String columnName: queryResults.get(0).columnSelectName) {
+        resp.addToColumnsList(columnName);
+      }
+    }
+    // 情况3：存在异常或只需要返回信息
+    else {
+      for (QueryResult resultItem : queryResults) {
+        if (resultItem == null) {
+          resp.addToColumnsList("null");
+        }
+        else {
+          resp.addToColumnsList(resultItem.getMessage());
+        }
+      }
+    }
+    // 思考：有多个正确的查询结果怎么破？
 
     resp.setStatus(new Status(Global.SUCCESS_CODE));
     resp.setIsAbort(false);
@@ -110,10 +142,14 @@ public class IServiceHandler implements IService.Iface {
   public ArrayList<QueryResult> handleCommand(String command, long sessionId, Manager manager) {
     //词法分析
     SQLLexer lexer = new SQLLexer(CharStreams.fromString(command));
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(StatementErrorListener.instance);
     CommonTokenStream tokens = new CommonTokenStream(lexer);
 
     //句法分析
     SQLParser parser = new SQLParser(tokens);
+    parser.removeErrorListeners();
+    parser.addErrorListener(StatementErrorListener.instance);
 
     //语义分析
     try {

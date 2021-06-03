@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
+import java.util.List;
 import java.util.Scanner;
 
 import static cn.edu.thssdb.utils.Global.SUCCESS_CODE;
@@ -153,12 +154,31 @@ public class Client {
     try {
       ExecuteStatementResp executeStatementResp = client.executeStatement(req);
       if (executeStatementResp.status.code == SUCCESS_CODE) {
-        println("success!");
+        // 如果有查询成功则返回结果
+        if (executeStatementResp.isSetRowList()) {
+          for (String columnName : executeStatementResp.columnsList) {
+            print(columnName + " ");
+          }
+          println();
+          for (List<String> row : executeStatementResp.rowList) {
+            for (String rowItem : row) {
+              print(rowItem + " ");
+            }
+            println();
+          }
+        }
+        // 否则：直接打印响应中列表中的结果
+        else {
+          for (String item: executeStatementResp.columnsList) {
+            // TODO: 对事务相关指令的处理
+            println(item);
+          }
+        }
 
-        // 如果有查询则返回结果
       }
       else {
         println("fail!");
+        println(executeStatementResp.status.getMsg());
       }
     } catch (TException e) {
       logger.error(e.getMessage());

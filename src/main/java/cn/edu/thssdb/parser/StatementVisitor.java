@@ -45,7 +45,9 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitSql_stmt(SQLParser.Sql_stmtContext ctx) {
         // 处理各种语句和情况
         // create db
-        if(ctx.create_db_stmt() != null){ return visitCreate_db_stmt(ctx.create_db_stmt());}
+        if(ctx.create_db_stmt() != null) {
+            return visitCreate_db_stmt(ctx.create_db_stmt());
+        }
 
         // drop db
         if(ctx.drop_db_stmt() != null){ return visitDrop_db_stmt(ctx.drop_db_stmt());}
@@ -337,7 +339,9 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // 根据是否指定插入列进行插入操作
-        if(ctx.column_name() != null){
+//        if(ctx.column_name() != null)
+        if (ctx.column_name().size() != 0)
+        {
             ArrayList<String> columnsName = new ArrayList<>();
             for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
                 columnsName.add(visitColumn_name(columnNameContext));
