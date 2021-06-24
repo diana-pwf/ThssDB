@@ -96,15 +96,6 @@ public class Database {
   }
 
 
-  public void insert(String tableName, String[] values){
-    try {
-      Table table = getTable(tableName);
-      table.insert(values);
-    } catch (Exception e){
-      throw e;
-    }
-  }
-
   public void insert(String tableName, ArrayList<String> columnsName, String[] values){
     try {
       Table table = getTable(tableName);

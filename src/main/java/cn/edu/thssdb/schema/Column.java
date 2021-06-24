@@ -23,6 +23,11 @@ public class Column implements Comparable<Column> {
     return type;
   }
 
+  public void setPrimary(){
+    primary = 1;
+    notNull = true;
+  }
+
   public boolean isPrimary(){ return primary == 1; }
 
   public boolean isNotNull(){ return notNull == true; }
