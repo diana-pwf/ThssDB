@@ -370,6 +370,63 @@ public class StatementVisitor extends SQLBaseVisitor{
         for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
             columnsName.add(visitColumn_name(columnNameContext));
         }
+
+        if (!manager.transactionSessions.contains(session)) {
+            for(String[] values: valueList){
+                try {
+                    db.insert(tableName, columnsName, values);
+                } catch (Exception e){
+                    msg = e.getMessage();
+                }
+            }
+            return new QueryResult(msg);
+        }
+
+        // session在事务中
+        Table table = db.getTable(tableName);
+        while (true) {
+            if (!manager.blockedSessions.contains(session)) {
+                // 尚未被阻塞，看看能不能加x锁
+
+                // 能加锁/成功，跳出循环正常执行
+                int result = table.getXLock(session);
+                if (result != -1) {
+                    if (result == 1) {
+                        // 能加锁
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    // 移出等待队列
+                    manager.blockedSessions.remove(session);
+                    break;
+                }
+                // 不能则加入等待队列
+                manager.blockedSessions.add(session);
+            }
+            else if (manager.blockedSessions.get(0).equals(session)) {
+                int result = table.getXLock(session);
+                if (result != -1)
+                {
+                    if (result == 1)
+                    {
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    manager.blockedSessions.remove(0);
+                    break;
+                }
+            }
+            // 因为阻塞，所以休眠一会  -- 繁忙等待
+            try {
+                Thread.sleep(300);
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+
         for(String[] values: valueList){
             try {
                 db.insert(tableName, columnsName, values);
@@ -377,8 +434,8 @@ public class StatementVisitor extends SQLBaseVisitor{
                 msg = e.getMessage();
             }
         }
-
         return new QueryResult(msg);
+
     }
 
     /**
@@ -587,25 +644,51 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // todo: 为啥sgl的里面 conditions为null时不加事务
+        Table table = database.getTable(tableName);
+
+        // 不在事务中正常执行
+        if (!manager.transactionSessions.contains(session)) {
+            try {
+                // table.freeXLock(session);
+                return new QueryResult(database.update(tableName, columnName, comparer, conditions));
+            } catch (Exception e) {
+                return new QueryResult(e.toString());
+            }
+        }
 
         while (true) {
             if (!manager.blockedSessions.contains(session)) {
                 // 尚未被阻塞，看看能不能加x锁
-                Table table = database.getTable(tableName);
-                if (table.getXLock(session) == -1) {
-                    // 不能加锁，加入等待队列
-                    manager.blockedSessions.add(session);
-                }
-                // 能加锁，跳出循环正常执行
-                else {
+
+                // 能加锁/成功，跳出循环正常执行
+                int result = table.getXLock(session);
+                if (result != -1) {
+                    if (result == 1) {
+                    // 能加锁
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    // 移出等待队列
+                    manager.blockedSessions.remove(session);
                     break;
                 }
+                // 不能则加入等待队列
+                manager.blockedSessions.add(session);
             }
             else if (manager.blockedSessions.get(0).equals(session)) {
                 // 已经被阻塞，看看本次能否轮到
-                Table table = database.getTable(tableName);
-                if (table.getXLock(session) == 1) {
-                    manager.blockedSessions.remove(session);
+
+                int result = table.getXLock(session);
+                if (result != -1)
+                {
+                    if (result == 1)
+                    {
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    manager.blockedSessions.remove(0);
                     break;
                 }
             }
@@ -618,10 +701,8 @@ public class StatementVisitor extends SQLBaseVisitor{
             }
         }
 
-        // 在事务中正常执行
         try {
-            Table table = database.getTable(tableName);
-            table.freeXLock(session);
+            // table.freeXLock(session);
             return new QueryResult(database.update(tableName, columnName, comparer, conditions));
         } catch (Exception e) {
             return new QueryResult(e.toString());
@@ -705,16 +786,18 @@ public class StatementVisitor extends SQLBaseVisitor{
                 return "not in transaction";
             }
             manager.transactionSessions.remove(session);
-            // todo: 为什么不直接移除
+            // 不直接移除,要保留 key 和空的 value
             Database database = manager.getCurrentDatabase();
             for (String tableName: manager.xLockDict.get(session))
             {
                 Table table = database.getTable(tableName);
-                // table.freeXLock(session);
+                table.freeXLock(session);
             }
-            manager.xLockDict.remove(session);
-            manager.sLockDict.remove(session);
-
+            ArrayList<String> tablesLock = new ArrayList<>();
+            manager.sLockDict.replace(session, tablesLock);
+            ArrayList<String> tablexLock = new ArrayList<>();
+            manager.xLockDict.replace(session, tablexLock);
+            // todo: sgl为啥不对sLock做任何操作
             // todo: 清空日志操作
 
             return "Successfully commit";
