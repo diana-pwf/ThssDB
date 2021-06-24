@@ -82,7 +82,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // delete
         if(ctx.delete_stmt() != null){
-
+            return visitDelete_stmt(ctx.delete_stmt());
         }
 
         // select
@@ -405,25 +405,15 @@ public class StatementVisitor extends SQLBaseVisitor{
             return new QueryResult(e.getMessage());
         }
         String tableName = visitTable_name(ctx.table_name());
-        // Table table = db.getTable(tableName);
         String msg = "";
 
         // FIXME: naive delete without dealing with transaction and lock
-        MultipleCondition conditions = null;
-        if (ctx.K_WHERE() == null) {
-            try{
-                // FIXME: 考虑在 Database 中增加 delete 接口？
-                msg.concat("Successfully deleted " + db.delete(tableName,null) + " data from the table: " + tableName);
-            } catch (Exception e){
-                msg.concat(e.getMessage());
-            }
-        }else{
-            conditions = visitMultiple_condition(ctx.multiple_condition());
-            try{
-                msg.concat("Successfully deleted " + db.delete(tableName, conditions) + " data from the table: " + tableName);
-            } catch (Exception e){
-                msg.concat(e.getMessage());
-            }
+
+        MultipleCondition conditions = (ctx.K_WHERE() == null ? null : visitMultiple_condition(ctx.multiple_condition()));
+        try{
+            msg = "Successfully deleted " + db.delete(tableName, conditions) + " data from the table: " + tableName;
+        } catch (Exception e){
+            msg = e.getMessage();
         }
         return new QueryResult(msg);
     }

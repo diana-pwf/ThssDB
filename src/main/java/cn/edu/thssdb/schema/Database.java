@@ -163,8 +163,8 @@ public class Database {
         String tableName = index[2];
         ArrayList<Column> columns = new ArrayList<>();
         BufferedReader reader = new BufferedReader(new FileReader(file));
-        while (reader.readLine()!=null) {
-          String str = reader.readLine();
+        String str = reader.readLine();
+        while (str!=null) {
           String[] colAttrs = str.split(",");
           String name = colAttrs[0];
           ColumnType type = ColumnType.valueOf(colAttrs[1]);
@@ -172,6 +172,7 @@ public class Database {
           boolean notNull = Boolean.parseBoolean(colAttrs[3]);
           int maxLength = Integer.parseInt(colAttrs[4]);
           columns.add(new Column(name,type,primary,notNull,maxLength));
+          str = reader.readLine();
         }
         createTableIfNotExists(tableName,columns.toArray(new Column[0]));
         reader.close();
