@@ -33,15 +33,16 @@ public class Manager {
   public void createDatabaseIfNotExists(String databaseName) {
     try{
       lock.writeLock().lock();
+      Database database = null;
       // 若哈希表中没有该数据库名称，则新建并加入
       if (!databases.containsKey(databaseName)) {
-        Database database = new Database(databaseName);
+        database = new Database(databaseName);
         databases.put(databaseName, database);
-
-        if (currentDatabase == null) {
-          currentDatabase = database;
-        }
       }
+      else{
+        database = databases.get(databaseName);
+      }
+      currentDatabase = database;
     } catch (Exception e) {
       e.printStackTrace();
       throw e;
@@ -50,18 +51,23 @@ public class Manager {
     }
   }
 
-  public void dropDatabase(String databaseName) {
+  public void dropDatabase(String databaseName) throws Exception {
     try{
       lock.writeLock().lock();
       // 判断数据库是否存在
       if (!databases.containsKey(databaseName)) {
         throw new DatabaseNotExistException();
       }
-
+      if(currentDatabase!=null){
+        if(currentDatabase.getName().equals(databaseName)){
+          currentDatabase = null;
+        }
+      }
       Database database = databases.get(databaseName);
       database.dropSelf();
       database = null;
       databases.remove(databaseName);
+      persist();
 
     } catch (Exception e) {
       e.printStackTrace();
@@ -102,8 +108,13 @@ public class Manager {
     return currentDatabase;
   }
 
+
+  /**
+   * 将数据库名称存储到 manager.data中
+   * @throws IOException
+   */
   public void persist() throws IOException {
-    File file = new File("manager.data");
+    File file = new File("DATA/manager.data");
     FileOutputStream fop = new FileOutputStream(file);
     OutputStreamWriter writer = new OutputStreamWriter(fop);
     // 将数据库名称存储到manager.data中
@@ -114,13 +125,31 @@ public class Manager {
     fop.close();
   }
 
+  /**
+   * 读取manger.data下的数据，并创建database
+   * @throws IOException
+   */
   public void recover() throws IOException {
-    File file = new File("manager.data");
+
+    File file = new File("DATA/manager.data");
+
+    if (!file.exists()) {
+      try {
+        file.createNewFile();
+
+      } catch (IOException e) {
+        e.printStackTrace();
+
+      }
+    }
+
     BufferedReader reader = new BufferedReader(new FileReader(file));
-    while (reader.readLine()!=null) {
-       String databaseName = reader.readLine();
+    String str;
+    while ((str=reader.readLine())!=null) {
+       String databaseName = str;
        createDatabaseIfNotExists(databaseName);
     }
+    currentDatabase = null;
     reader.close();
   }
 

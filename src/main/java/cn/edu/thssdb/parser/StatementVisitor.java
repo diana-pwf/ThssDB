@@ -129,8 +129,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         String msg = "Successfully created database: " + dbname;
         try {
             manager.createDatabaseIfNotExists(dbname);
-            // TODO: 考虑是否将 recover 放进 createDatabaseIfNotExists 的一环（即一创建就存储数据库名）
-            manager.recover();
+            manager.persist();
         } catch (Exception e){
             msg = e.getMessage();
         }
@@ -188,8 +187,15 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx){
+        Database db = null;
+        try{
+            db = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
+
         String tableName = visitTable_name(ctx.table_name());
-        Database db = manager.getCurrentDatabase();
         String msg = "Successfully created table: " + tableName + " in database: " + db.getName();
 
         // 检查是否指定主键
@@ -313,8 +319,14 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitDrop_table_stmt(SQLParser.Drop_table_stmtContext ctx){
+        Database db = null;
+        try{
+            db = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
         String tableName = visitTable_name(ctx.table_name());
-        Database db = manager.getCurrentDatabase();
         String msg = "Successfully dropped table: " + tableName + " in database: " + db.getName();
         try{
             db.dropTable(tableName);
@@ -341,7 +353,13 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitInsert_stmt(SQLParser.Insert_stmtContext ctx){
-        Database db = manager.getCurrentDatabase();
+        Database db = null;
+        try{
+            db = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
         // TODO: find out difference between toString() and getText()
         //       toString = '[' + getText() + ']' （貌似）
         String tableName = visitTable_name(ctx.table_name());
@@ -391,7 +409,13 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitDelete_stmt(SQLParser.Delete_stmtContext ctx){
-        Database db = manager.getCurrentDatabase();
+        Database db = null;
+        try{
+            db = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
         String tableName = visitTable_name(ctx.table_name());
         // Table table = db.getTable(tableName);
         String msg = "";
@@ -452,7 +476,13 @@ public class StatementVisitor extends SQLBaseVisitor{
     @Override
     public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx){
 
-        Database database = manager.getCurrentDatabase();
+        Database database = null;
+        try{
+            database = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
         if(database == null) {
             throw new DatabaseNotExistException();
         }
@@ -508,7 +538,13 @@ public class StatementVisitor extends SQLBaseVisitor{
     /** 执行update指令 **/
     @Override
     public QueryResult visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
-        Database database = manager.getCurrentDatabase();
+        Database database = null;
+        try{
+            database = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
 
         String table_name = visitTable_name(ctx.table_name());
 
@@ -546,7 +582,13 @@ public class StatementVisitor extends SQLBaseVisitor{
     /** 执行show table指令 **/
     @Override
     public QueryResult visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
-        Database database = manager.getCurrentDatabase();
+        Database database = null;
+        try{
+            database = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
         String msg;
         try {
             msg = database.showAllTables();
@@ -561,8 +603,14 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx) {
         if (ctx.table_name() != null){
             String msg;
+            Database database = null;
+            try{
+                database = getCurrentDB();
+            }
+            catch (Exception e){
+                return new QueryResult(e.getMessage());
+            }
             String tableName = visitTable_name(ctx.table_name());
-            Database database = manager.getCurrentDatabase();
             try {
                 msg = database.showTableMeta(tableName);
             } catch (Exception e) {
@@ -662,7 +710,13 @@ public class StatementVisitor extends SQLBaseVisitor{
     }
 
 
-
+    private Database getCurrentDB() {
+        Database current_base = manager.getCurrentDatabase();
+        if(current_base == null) {
+            throw new DatabaseNotExistException();
+        }
+        return current_base;
+    }
 
     public QueryTable visitQueryTable() {
         // TODO: 单一表

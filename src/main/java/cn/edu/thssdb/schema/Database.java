@@ -32,13 +32,14 @@ public class Database {
     }
   }
 
-  public void createTableIfNotExists(String tableName, Column[] tableColumns) {
+  public void createTableIfNotExists(String tableName, Column[] tableColumns) throws IOException {
     try{
       lock.writeLock().lock();
       // 若哈希表中没有该表名称，则新建并加入
       if (!tables.containsKey(tableName)) {
         Table table = new Table(name, tableName, tableColumns);
         tables.put(tableName, table);
+        persist();
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -59,7 +60,7 @@ public class Database {
 
   public String getName() { return name;}
 
-  public void dropTable(String tableName) {
+  public void dropTable(String tableName) throws Exception {
     try{
       lock.writeLock().lock();
       // 判断表是否存在
@@ -69,10 +70,24 @@ public class Database {
 
       Table table = tables.get(tableName);
 
-      // TODO: 取决于Table类中的drop函数实现
-      // TODO: 可以再检查是否已删除表对应的记录文件
-      table.drop();
-
+      try{
+        table.dropSelf();
+      }catch (Exception e){
+        e.printStackTrace();
+        throw e;
+      }
+      finally {
+        String path = "DATA/"+"meta_"+name+"_"+tableName+".data";
+        File file = new File(path);
+        if(file.exists()&&file.isFile()){
+          if(file.delete()){
+            System.out.println("successfully drop table "+tableName+"meta file!");
+          }
+          else{
+            throw new Exception("Error occurs when drop table "+tableName+"meta file!");
+          }
+        }
+      }
       table = null;
       tables.remove(tableName);
 
@@ -188,15 +203,15 @@ public class Database {
     }
   }
 
-  public void dropSelf() {
+  public void dropSelf() throws Exception {
     try{
       lock.writeLock().lock();
-
-      // TODO: 删除 database对应的文件
 
       for (Table table: tables.values()) {
         dropTable(table.tableName);
       }
+
+
       // tables.clear();
       tables = null;
 
