@@ -124,6 +124,14 @@ public class StatementVisitor extends SQLBaseVisitor{
             return new QueryResult(visitCommit_stmt(ctx.commit_stmt()));
         }
 
+        if (ctx.auto_begin_transaction_stmt() != null) {
+            return new QueryResult(visitAuto_begin_transaction_stmt(ctx.auto_begin_transaction_stmt()));
+        }
+
+        if (ctx.auto_commit_stmt() != null) {
+            return new QueryResult(visitAuto_commit_stmt(ctx.auto_commit_stmt()));
+        }
+
         return null;
     }
 
@@ -801,6 +809,60 @@ public class StatementVisitor extends SQLBaseVisitor{
             // todo: 清空日志操作
 
             return "Successfully commit";
+        }
+        catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
+    /**
+     * 执行自动开始事务的指令
+     * @param ctx
+     * @return 返回自动开始事务的信息或创建失败的原因
+     */
+    @Override
+    public String visitAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx){
+        try {
+            if (manager.transactionSessions.contains(session)) {
+                return "already in transaction";
+            }
+            manager.transactionSessions.add(session);
+            manager.sLockDict.put(session, new ArrayList<String>());
+            manager.xLockDict.put(session, new ArrayList<String>());
+            return "successfully auto begin transaction";
+        }
+        catch (Exception e) {
+            return e.getMessage();
+        }
+
+    }
+
+    /**
+     * 执行自动提交事务的指令
+     * @param ctx
+     * @return 返回自动提交事务的信息或创建失败的原因
+     */
+    @Override
+    public String visitAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx){
+        try {
+            if (!manager.transactionSessions.contains(session)) {
+                return "not in transaction";
+            }
+            manager.transactionSessions.remove(session);
+            // 不直接移除,要保留 key 和空的 value
+            Database database = manager.getCurrentDatabase();
+            for (String tableName: manager.xLockDict.get(session))
+            {
+                Table table = database.getTable(tableName);
+                table.freeXLock(session);
+            }
+            ArrayList<String> tablesLock = new ArrayList<>();
+            manager.sLockDict.replace(session, tablesLock);
+            ArrayList<String> tablexLock = new ArrayList<>();
+            manager.xLockDict.replace(session, tablexLock);
+            // todo: sgl为啥不对sLock做任何操作
+
+            return "Successfully auto commit";
         }
         catch (Exception e) {
             return e.getMessage();

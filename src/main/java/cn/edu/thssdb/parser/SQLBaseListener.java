@@ -52,6 +52,30 @@ public class SQLBaseListener implements SQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterCreate_db_stmt(SQLParser.Create_db_stmtContext ctx) { }
 	/**
 	 * {@inheritDoc}
