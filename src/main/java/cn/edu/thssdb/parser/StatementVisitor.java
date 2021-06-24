@@ -356,28 +356,16 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // 根据是否指定插入列进行插入操作
-//        if(ctx.column_name() != null)
-        if (ctx.column_name().size() != 0)
-        {
-            ArrayList<String> columnsName = new ArrayList<>();
-            for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
-                columnsName.add(visitColumn_name(columnNameContext));
-            }
-            for(String[] values: valueList){
-                try {
-                    // FIXME: 考虑在 Database 中增加 insert 接口？
-                    db.insert(tableName, columnsName, values);
-                } catch (Exception e){
-                    msg = e.getMessage();
-                }
-            }
-        }else{
-            for(String[] values: valueList){
-                try {
-                    db.insert(tableName, values);
-                } catch (Exception e){
-                    msg = e.getMessage();
-                }
+
+        ArrayList<String> columnsName = new ArrayList<>();
+        for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
+            columnsName.add(visitColumn_name(columnNameContext));
+        }
+        for(String[] values: valueList){
+            try {
+                db.insert(tableName, columnsName, values);
+            } catch (Exception e){
+                msg = e.getMessage();
             }
         }
 

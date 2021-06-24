@@ -135,6 +135,11 @@ public class Table implements Iterable<Row> {
    * @param values: 要插入的值（以 String[] 传入）
    */
   public void insert(ArrayList<String> columnsName, String[] values){
+    if(columnsName.size() == 0){
+      insert(values);
+      return;
+    }
+
     if(values == null){
       throw new OperateTableWithNullException("value");
     } else if(columns == null){
