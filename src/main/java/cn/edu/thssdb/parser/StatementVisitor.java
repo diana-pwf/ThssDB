@@ -633,7 +633,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     @Override
     public Condition visitCondition(SQLParser.ConditionContext ctx) {
         Comparer left = visitExpression(ctx.expression(0));
-        Comparer right = visitExpression(ctx.expression(0));
+        Comparer right = visitExpression(ctx.expression(1));
         ComparatorType type = visitComparator(ctx.comparator());
         return new Condition(left, right, type);
     }
