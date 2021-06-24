@@ -82,6 +82,11 @@ public class Database {
     QueryResult queryResult = new QueryResult(queryTable,null,false);
     return null;
   }
+  // todo: select函数
+  public QueryResult select(ArrayList<String> columnNames, QueryTable queryTable, MultipleCondition conditions, Boolean distinct) {
+    return new QueryResult("");
+  }
+
 
   public String update(String tableName, String columnName, Comparer comparer, MultipleCondition conditions) {
     Table table = getTable(tableName);

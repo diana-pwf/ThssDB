@@ -1,6 +1,7 @@
 package cn.edu.thssdb.parser;
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
+import cn.edu.thssdb.exception.NotSelectTableException;
 import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
@@ -15,6 +16,7 @@ import cn.edu.thssdb.type.ConditionType;
 import javax.xml.crypto.Data;
 import java.awt.image.AreaAveragingScaleFilter;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.StringJoiner;
 
 public class StatementVisitor extends SQLBaseVisitor{
@@ -111,7 +113,13 @@ public class StatementVisitor extends SQLBaseVisitor{
         // quit
         if(ctx.quit_stmt() != null){ return visitQuit_stmt(ctx.quit_stmt());}
 
+        if (ctx.begin_transaction_stmt() != null) {
+            return new QueryResult(visitBegin_transaction_stmt(ctx.begin_transaction_stmt()));
+        }
 
+        if (ctx.commit_stmt() != null) {
+            return new QueryResult(visitCommit_stmt(ctx.commit_stmt()));
+        }
 
         return null;
     }
@@ -433,20 +441,23 @@ public class StatementVisitor extends SQLBaseVisitor{
 
     /** 执行select指令 **/
     @Override
-    public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx){
+    public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx) {
 
         Database database = manager.getCurrentDatabase();
         if(database == null) {
             throw new DatabaseNotExistException();
         }
 
+        // distict 处理
         boolean distinct = (ctx.K_DISTINCT() != null);
 
+        // condition 处理
         MultipleCondition conditions = null;
         if (ctx.K_WHERE() != null) {
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
+        // column 处理
         ArrayList<String> columnNames = new ArrayList<String>();
         int columnNum = ctx.result_column().size();
         for (int i = 0; i < columnNum; i++) {
@@ -458,29 +469,94 @@ public class StatementVisitor extends SQLBaseVisitor{
             columnNames.add(columnName);
         }
 
-        // TODO: 读取QueryTable变量
+        // table 处理
+        // todo: 看看有无别的写法
+//        int tableNum = ctx.table_query().size();
+//        if (tableNum == 0) {
+//            throw new NotSelectTableException();
+//        }
+//        for (int i = 0; i < tableNum; i++) {
+//
+//        }
+        QueryTable queryTable = visitQueryTable(ctx.table_query(0));
 
-        QueryTable queryTable = null;
-
-        int tableNum = ctx.table_query().size();
-        if (tableNum == 0) {
-            // TODO: 抛异常
+        // 若session不在事务中，直接执行
+        if (!manager.transactionSessions.contains(session)) {
+            try {
+                // TODO
+                return database.select(columnNames, queryTable, conditions, distinct);
+            } catch (Exception e) {
+                return new QueryResult(e.toString());
+            }
         }
-        for (int i = 0; i < tableNum; i++) {
 
+        ArrayList<String> tableNames = new ArrayList<String>();
+        for (SQLParser.Table_nameContext subctx : ctx.table_query(0).table_name()) {
+            tableNames.add(subctx.getText().toLowerCase());
         }
 
-        // TODO: 考虑事务
+        while (true) {
+            if (!manager.blockedSessions.contains(session)) {
+                // 尚未被阻塞，看看能不能加s锁
+                int index;
+                boolean blocked = false;
+                for (index = 0; index < tableNames.size(); index++) {
+                    Table table = database.getTable(tableNames.get(index));
+                    if (table.getSLock(session) == -1) {
+                        blocked = true;
+                        break;
+                    }
+                }
+                // 不能加锁，加入等待队列
+                if (blocked) {
+                    for (int i = 0; i < index; i++) {
+                        Table table = database.getTable(tableNames.get(i));
+                        table.freeSLock(session);
+                    }
+                    manager.blockedSessions.add(session);
+                }
+                // 能加锁，跳出循环正常执行
+                else {
+                    break;
+                }
+            }
+            else if (manager.blockedSessions.get(0).equals(session)) {
+                // 已经被阻塞，看看本次能否轮到
+                // todo: 为啥只看队列开头第一个
+                int index;
+                boolean blocked = false;
+                for (index = 0; index < tableNames.size(); index++) {
+                    Table table = database.getTable(tableNames.get(index));
+                    if (table.getSLock(session) == -1) {
+                        blocked = true;
+                        break;
+                    }
+                }
+                if (!blocked) {
+                    manager.blockedSessions.remove(session);
+                    break;
+                }
+            }
+            // 因为阻塞，所以休眠一会  -- 繁忙等待
+            try {
+                Thread.sleep(300);
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+
+        // 在事务中正常执行
         try {
-            // TODO
-            // database.select(columnNames, queryTable, conditions, distinct);
-            return new QueryResult("");
+            for (String table_name : tableNames) {
+                Table table = database.getTable(table_name);
+                table.freeSLock(session);
+            }
+            return database.select(columnNames, queryTable, conditions, distinct);
         } catch (Exception e) {
             return new QueryResult(e.toString());
-
         }
 
-        // return null;
     }
 
     @Override
@@ -549,6 +625,60 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
         return null;
     }
+
+    /**
+     * 执行开始事务的指令
+     * @param ctx
+     * @return 返回开始事务的信息或创建失败的原因
+     */
+    @Override
+    public String visitBegin_transaction_stmt(SQLParser.Begin_transaction_stmtContext ctx){
+        try {
+            if (manager.transactionSessions.contains(session)) {
+                return "already in transaction";
+            }
+            manager.transactionSessions.add(session);
+            manager.sLockDict.put(session, new ArrayList<String>());
+            manager.xLockDict.put(session, new ArrayList<String>());
+            return "successfully begin transaction";
+        }
+        catch (Exception e) {
+            return e.getMessage();
+        }
+
+    }
+
+    /**
+     * 执行提交事务的指令
+     * @param ctx
+     * @return 返回提交事务的信息或创建失败的原因
+     */
+    @Override
+    public String visitCommit_stmt(SQLParser.Commit_stmtContext ctx){
+        try {
+            if (!manager.transactionSessions.contains(session)) {
+                return "not in transaction";
+            }
+            manager.transactionSessions.remove(session);
+            // todo: 为什么不直接移除
+            Database database = manager.getCurrentDatabase();
+            for (String tableName: manager.xLockDict.get(session))
+            {
+                Table table = database.getTable(tableName);
+                // table.freeXLock(session);
+            }
+            manager.xLockDict.remove(session);
+            manager.sLockDict.remove(session);
+
+            // todo: 清空日志操作
+
+            return "Successfully commit";
+        }
+        catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
 
     /** 处理复合逻辑 **/
     @Override
@@ -641,11 +771,20 @@ public class StatementVisitor extends SQLBaseVisitor{
 
 
 
-    public QueryTable visitQueryTable() {
-        // TODO: 单一表
-
-        // TODO: 处理复合逻辑
-
-        return null;
+    public QueryTable visitQueryTable(SQLParser.Table_queryContext ctx) {
+        // todo: 看看这个有无别的写法  考虑：如果table不存在呢？
+        Database database = manager.getCurrentDatabase();
+        // 处理单一逻辑
+        if (ctx.K_JOIN().size() == 0) {
+            Table table = database.getTable(ctx.table_name(0).getText());
+            return new SingleTable(table);
+        }
+        // 处理复合逻辑
+        MultipleCondition multipleCondition = visitMultiple_condition(ctx.multiple_condition());
+        ArrayList<Table> tables = new ArrayList<Table>();
+        for (SQLParser.Table_nameContext subctx : ctx.table_name()) {
+            tables.add(database.getTable(subctx.getText().toLowerCase()));
+        }
+        return new JointTable(tables, multipleCondition);
     }
 }

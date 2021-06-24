@@ -363,6 +363,21 @@ public class Table implements Iterable<Row> {
     return result.toString();
   }
 
+  public Integer getSLock(Long session) {
+    return 1;
+  }
+
+  public Integer getXLock(Long session) {
+    return 1;
+  }
+
+  public Integer freeSLock(Long session) {
+    return 1;
+  }
+
+  public Integer freeXLock(Long session) {
+    return 1;
+  }
 
   private class TableIterator implements Iterator<Row> {
     private Iterator<Pair<Entry, Row>> iterator;
