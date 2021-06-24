@@ -117,7 +117,7 @@ public class QueryResult {
         seqIndex += metaInfo.getColumnSize();
       }
       if(!tableExist){
-        throw new TableNotExistException();
+        throw new TableNotExistException(tableName);
       }
       return seqIndex;
     }

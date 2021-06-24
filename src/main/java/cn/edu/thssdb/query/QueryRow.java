@@ -87,7 +87,7 @@ public class QueryRow extends Row {
                 seqIndex += metaInfo.getColumnSize();
             }
             if(!tableExist){
-                throw new TableNotExistException();
+                throw new TableNotExistException(tableName);
             }
             return new Comparer(type, (String) entries.get(seqIndex).value);
         }

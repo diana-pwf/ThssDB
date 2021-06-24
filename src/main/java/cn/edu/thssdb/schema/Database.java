@@ -6,6 +6,7 @@ import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.query.MultipleCondition;
 import cn.edu.thssdb.type.ColumnType;
+import javafx.scene.control.Tab;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -41,13 +42,19 @@ public class Database {
       }
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
   }
 
+  // FIXME: 异常处理
   public Table getTable(String tableName){
-    return tables.get(tableName);
+    Table table = tables.get(tableName);
+    if(table == null){
+      throw new TableNotExistException(tableName);
+    }
+    return table;
   }
 
   public String getName() { return name;}
@@ -57,7 +64,7 @@ public class Database {
       lock.writeLock().lock();
       // 判断表是否存在
       if (!tables.containsKey(tableName)) {
-        throw new TableNotExistException();
+        throw new TableNotExistException(tableName);
       }
 
       Table table = tables.get(tableName);
@@ -71,6 +78,7 @@ public class Database {
 
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -88,9 +96,40 @@ public class Database {
   }
 
 
+  public void insert(String tableName, String[] values){
+    try {
+      Table table = getTable(tableName);
+      table.insert(values);
+    } catch (Exception e){
+      throw e;
+    }
+  }
+
+  public void insert(String tableName, ArrayList<String> columnsName, String[] values){
+    try {
+      Table table = getTable(tableName);
+      table.insert(columnsName, values);
+    } catch (Exception e){
+      throw e;
+    }
+  }
+
+  public String delete(String tableName, MultipleCondition condition){
+    try {
+      Table table = getTable(tableName);
+      return table.delete(condition);
+    } catch (Exception e){
+      throw e;
+    }
+  }
+
   public String update(String tableName, String columnName, Comparer comparer, MultipleCondition conditions) {
-    Table table = getTable(tableName);
-    return table.update(columnName, comparer, conditions);
+    try{
+      Table table = getTable(tableName);
+      return table.update(columnName, comparer, conditions);
+    } catch (Exception e){
+      throw e;
+    }
   }
 
   public void persist() throws IOException {
@@ -139,7 +178,7 @@ public class Database {
     }
   }
 
-  public void quit(){
+  public void quit() throws IOException {
     try {
       lock.writeLock().lock();
       for (Table table : tables.values()) {
@@ -148,6 +187,7 @@ public class Database {
       persist();
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -167,6 +207,7 @@ public class Database {
 
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -174,6 +215,9 @@ public class Database {
 
   public String showTableMeta(String tableName) {
     Table table = getTable(tableName);
+    if(table == null){
+      throw new TableNotExistException(tableName);
+    }
     return table.showMeta();
   }
 
