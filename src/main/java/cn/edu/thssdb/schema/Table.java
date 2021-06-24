@@ -34,6 +34,11 @@ public class Table implements Iterable<Row> {
   private int primaryIndex;
   public ArrayList<Entry> entries;
 
+  private int lockLevel; // 被加锁的最高级别 0表示未加锁 1表示加了共享锁 2表示加了排他锁
+  ArrayList<Long> sLockSessions;
+  ArrayList<Long> xLockSessions;
+
+
   public Table(String databaseName, String tableName, Column[] columns) {
     this.lock = new ReentrantReadWriteLock();
     this.databaseName = databaseName;
@@ -54,6 +59,10 @@ public class Table implements Iterable<Row> {
       }
     }
     this.entries = new ArrayList<>();
+    this.lockLevel = 0;
+    this.sLockSessions = new ArrayList<>();
+    this.xLockSessions = new ArrayList<>();
+
   }
 
   private void checkNull(ArrayList<Column> columns, ArrayList<Entry> entries){
@@ -389,20 +398,69 @@ public class Table implements Iterable<Row> {
     return result.toString();
   }
 
-  public Integer getSLock(Long session) {
-    return 1;
+  public int getSLock(Long session) {
+    // 返回-1表示加锁失败 返回0表示可以执行但没加锁 返回1表示加锁成功
+    if (lockLevel == 0) {
+      // 直接加
+      sLockSessions.add(session);
+      lockLevel = 1;
+      return 1;
+    }
+    else if (lockLevel == 1) {
+      if (sLockSessions.contains(session)) {
+        // 已有s锁
+        return 0;
+      }
+      else {
+        sLockSessions.add(session);
+        return 1;
+      }
+    }
+    else {
+      // 此时lockLevel == 2
+      if (xLockSessions.contains(session)) {
+        // 自身已有x锁，不必加
+        return 0;
+      } else {
+        // 被别的锁占用，不能加
+        return -1;
+      }
+    }
   }
 
-  public Integer getXLock(Long session) {
-    return 1;
+  public int getXLock(Long session) {
+    if (lockLevel == 0) {
+      xLockSessions.add(session);
+      lockLevel = 2;
+      return 1;
+    }
+    else if (lockLevel == 1) {
+      return -1;
+    }
+    else {
+      if (xLockSessions.contains(session)) {
+        return 0;
+      }
+      else {
+        return -1;
+      }
+    }
   }
 
-  public Integer freeSLock(Long session) {
-    return 1;
+  public void freeSLock(Long session) {
+    if (sLockSessions.contains(session)) {
+      sLockSessions.remove(session);
+      if (sLockSessions.size() == 0) {
+        lockLevel = 0;
+      }
+    }
   }
 
-  public Integer freeXLock(Long session) {
-    return 1;
+  public void freeXLock(Long session) {
+    if (xLockSessions.contains(session)) {
+      xLockSessions.remove(session);
+      lockLevel = 0;
+    }
   }
 
   private class TableIterator implements Iterator<Row> {
