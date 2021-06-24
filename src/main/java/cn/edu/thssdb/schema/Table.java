@@ -234,9 +234,28 @@ public class Table implements Iterable<Row> {
     return count.toString();
   }
 
-  // TODO:
-  public void drop(){
-    
+  // TODO:事务处理
+  public void dropSelf() throws Exception {
+    try {
+      lock.writeLock().lock();
+      columns.clear();
+      index = null;
+      entries.clear();
+      columns.clear();
+      String filename = "DATA/" + databaseName + "_" + tableName + ".data";
+      File file = new File(filename);
+      if (file.isFile() && file.exists()) {
+        if (file.delete()) {
+          System.out.println("successfully drop table " + tableName);
+        } else {
+          throw new Exception("Error occurs when drop table" + tableName);
+        }
+      }
+    }catch (Exception e){
+      throw  e;
+    }finally {
+      lock.writeLock().unlock();
+    }
   }
 
   /**
