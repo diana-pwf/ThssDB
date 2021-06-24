@@ -15,6 +15,7 @@ import cn.edu.thssdb.type.ComparatorType;
 import cn.edu.thssdb.type.ComparerType;
 import cn.edu.thssdb.type.ConditionType;
 
+import javax.management.Query;
 import javax.xml.crypto.Data;
 import java.awt.image.AreaAveragingScaleFilter;
 import java.util.ArrayList;
@@ -349,6 +350,9 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // 根据是否指定插入列进行插入操作
 //        if(ctx.column_name() != null)
+
+
+
         if (ctx.column_name().size() != 0)
         {
             ArrayList<String> columnsName = new ArrayList<>();
@@ -570,9 +574,9 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
         Database database = manager.getCurrentDatabase();
 
-        String table_name = visitTable_name(ctx.table_name());
+        String tableName = visitTable_name(ctx.table_name());
 
-        String column_name = visitColumn_name(ctx.column_name());
+        String columnName = visitColumn_name(ctx.column_name());
 
         Comparer comparer = visitExpression(ctx.expression());
 
@@ -581,12 +585,45 @@ public class StatementVisitor extends SQLBaseVisitor{
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
-        // TODO: 考虑事务
-        try{
-            return new QueryResult(database.update(table_name, column_name, comparer, conditions));
+        // todo: 为啥sgl的里面 conditions为null时不加事务
+
+        while (true) {
+            if (!manager.blockedSessions.contains(session)) {
+                // 尚未被阻塞，看看能不能加x锁
+                Table table = database.getTable(tableName);
+                if (table.getXLock(session) == -1) {
+                    // 不能加锁，加入等待队列
+                    manager.blockedSessions.add(session);
+                }
+                // 能加锁，跳出循环正常执行
+                else {
+                    break;
+                }
+            }
+            else if (manager.blockedSessions.get(0).equals(session)) {
+                // 已经被阻塞，看看本次能否轮到
+                Table table = database.getTable(tableName);
+                if (table.getXLock(session) == 1) {
+                    manager.blockedSessions.remove(session);
+                    break;
+                }
+            }
+            // 因为阻塞，所以休眠一会  -- 繁忙等待
+            try {
+                Thread.sleep(300);
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
         }
-        catch (Exception e) {
-            return new QueryResult(e.getMessage());
+
+        // 在事务中正常执行
+        try {
+            Table table = database.getTable(tableName);
+            table.freeXLock(session);
+            return new QueryResult(database.update(tableName, columnName, comparer, conditions));
+        } catch (Exception e) {
+            return new QueryResult(e.toString());
         }
 
     }
