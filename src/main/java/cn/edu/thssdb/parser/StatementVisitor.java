@@ -192,21 +192,24 @@ public class StatementVisitor extends SQLBaseVisitor{
         Database db = manager.getCurrentDatabase();
         String msg = "Successfully created table: " + tableName + " in database: " + db.getName();
 
-        // 建立列
-        int primaryCount = 0;
+        // 检查是否指定主键
+        Boolean hasPrimary = false;
         ArrayList<Column> columnList = new ArrayList<>();
-        for(SQLParser.Column_defContext columnDefCtx: ctx.column_def()){
-            Column column = visitColumn_def(columnDefCtx);
-            if(column.isPrimary()){
-                ++primaryCount;
-                if(primaryCount > 1) break;
+        if(ctx.table_constraint() != null){
+            String primaryKeyName = visitTable_constraint(ctx.table_constraint());
+            for(SQLParser.Column_defContext columnDefCtx: ctx.column_def()){
+                Column column = visitColumn_def(columnDefCtx);
+                if(column.getName().equals(primaryKeyName)){
+                    column.setPrimary();
+                    hasPrimary = true;
+                }
+                columnList.add(column);
             }
-            columnList.add(column);
         }
-        if(primaryCount == 0){
+
+        // 建立列
+        if(hasPrimary == false){
             msg = new NoPrimaryKeyException().getMessage();
-        } else if(primaryCount > 1){
-            msg = new DuplicatePrimaryKeyException().getMessage();
         } else {
             Column[] columns = columnList.toArray(new Column[0]);
             try{
@@ -215,8 +218,25 @@ public class StatementVisitor extends SQLBaseVisitor{
                 msg = e.getMessage();
             }
         }
+
         return new QueryResult(msg);
      }
+
+
+    /**
+     * 返回主键列名
+     * @param ctx
+     * @return 返回主键列名
+     */
+    public String visitTable_constraint(SQLParser.Table_constraintContext ctx) {
+        String keyConstraint = "";
+        int size = ctx.column_name().size();
+        for(int i = 0; i < size; ++i){
+            keyConstraint += ctx.column_name(i).getText().toLowerCase();
+        }
+        return keyConstraint;
+    }
+
 
     /**
      * 读取列定义中的“名字、类型和最大长度、是否为主键和非空的限制”
@@ -284,10 +304,6 @@ public class StatementVisitor extends SQLBaseVisitor{
         if(ctx.K_NOT() != null && ctx.K_NULL() != null) return new Pair<>(0, true);
         return new Pair<>(0, false);
     }
-
-    // FIXME: 搞清楚 visitTable_constraint 在干嘛
-    // @Override
-    // public visitTable_constraint
 
 
     /**
