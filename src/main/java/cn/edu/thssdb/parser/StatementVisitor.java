@@ -568,7 +568,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         Database database = null;
         try{
-            database = getCurrentDB();
+            database = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -775,21 +775,17 @@ public class StatementVisitor extends SQLBaseVisitor{
             catch(Exception e) {
                 System.out.println(e.getMessage());
             }
+        }
+
         String msg = "";
         try{
             msg = database.update(tableName, columnName, comparer, conditions);
+            return new QueryResult(msg);
         }
         catch (Exception e) {
             msg = e.getMessage();
+            return new QueryResult(msg);
         }
-
-        try {
-            // table.freeXLock(session);
-            return new QueryResult(database.update(tableName, columnName, comparer, conditions));
-        } catch (Exception e) {
-            return new QueryResult(e.toString());
-        }
-
     }
 
     /** 执行show db指令 **/

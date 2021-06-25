@@ -218,14 +218,12 @@ public class Manager {
   public void writeLog(String statement) {
     // 找到对应的数据库并将操作语句写入文件
     Database db = getCurrentDatabase();
-    File file = new File("DATA/" + db.getName() + ".data");
+    File file = new File("DATA/" + db.getName() + ".log");
 
     try {
-      FileOutputStream fop = new FileOutputStream(file);
-      OutputStreamWriter writer = new OutputStreamWriter(fop);
+      FileWriter writer = new FileWriter(file, true);
       writer.write(statement +'\n');
       writer.close();
-      fop.close();
     }
     catch (IOException e) {
       e.printStackTrace();
@@ -233,7 +231,7 @@ public class Manager {
   }
 
   public void readLog(String databaseName) {
-    String fileName = "DATA/" + databaseName + ".data";
+    String fileName = "DATA/" + databaseName + ".log";
     File file = new File(fileName);
     if (file.exists() && file.isFile()) {
       System.out.println("Database log file size: " + file.length() + " Byte");
@@ -246,43 +244,51 @@ public class Manager {
 
         String line;
         ArrayList<String> lines = new ArrayList<>();
-        ArrayList<Integer> transcations = new ArrayList<>();
-        ArrayList<Integer> commits = new ArrayList<>();
+        ArrayList<Integer> transactionList = new ArrayList<>();
 
         // 遍历读到的每一行 并记录begin transaction与 commit 所在行号
         int index = 0;
+        int lastTransaction = -1;
+        int lastCommit = -1;
         while ((line = bufferedReader.readLine()) != null) {
           if (line.equals("begin transaction")) {
-            transcations.add(index);
+            lastTransaction = index;
+            transactionList.add(index);
           } else if (line.equals("commit")) {
-            commits.add(index);
+            lastCommit = index;
           }
           lines.add(line);
           index++;
         }
 
-        // 从开头命令重新执行到最后一次commit
-
-        int lastCommit = 0;
-        if (transcations.size() == commits.size()) {
-          lastCommit = lines.size() - 1;
-        } else {
-          lastCommit = commits.get(commits.size() - 1);
+        // 从开头命令重新执行到最后需要恢复的命令
+        int lastCmd = 0;
+        // 最后一次begin在最后一次commit之前，读取所有命令
+        if (lastTransaction <= lastCommit) {
+          lastCmd = lines.size() - 1;
         }
-        for (int i = 0; i <= lastCommit; i++) {
+        // 最后一次begin在最后一次commit之后，找到最后一次commit后最早的begin，读取之前的所有命令
+        else {
+          for (int i : transactionList) {
+            if (i > lastCommit) {
+              lastCmd = i - 1;
+            }
+          }
+        }
+        for (int i = 0; i <= lastCmd; i++) {
           handleCommand(lines.get(i), this);
         }
-        System.out.println("read " + (lastCommit + 1) + " lines");
+        System.out.println("read " + (lastCmd + 1) + " lines");
         reader.close();
         bufferedReader.close();
 
         // 如果有部分未commit的语句被执行，将清空log并重写实际执行部分
-        if (transcations.size() != commits.size()) {
+        if (lastTransaction > lastCommit) {
           FileWriter writer_1 = new FileWriter(fileName);
           writer_1.write("");
           writer_1.close();
           FileWriter writer_2 = new FileWriter(fileName, true);
-          for (int i = 0; i <= lastCommit; i++) {
+          for (int i = 0; i <= lastCmd; i++) {
             writer_2.write(lines.get(i) + "\n");
           }
           writer_2.close();

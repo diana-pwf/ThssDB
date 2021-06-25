@@ -150,7 +150,8 @@ public class IServiceHandler implements IService.Iface {
   public ArrayList<QueryResult> handleCommand(String command, long sessionId, Manager manager) {
     String cmd = command.split(" ")[0].toLowerCase();
 
-    if (sessionId == 0 && (cmd.equals("insert") || cmd.equals("update") || cmd.equals("delete") || cmd.equals("select"))) {
+    if (sessionId == 1 && (cmd.equals("insert") || cmd.equals("update") || cmd.equals("delete") || cmd.equals("select")
+      || cmd.equals("begin") || cmd.equals("commit"))) {
       manager.writeLog(command);
     }
 

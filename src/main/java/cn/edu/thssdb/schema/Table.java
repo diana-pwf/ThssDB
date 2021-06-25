@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  *  参数说明：
  *  primaryIndex: 记录本张表的主键位置作为主属性
- *  entries: 记录本表所有主键（FIXME: 根据参考架构，可以改到页式）
+ *  entries: 记录本表所有主键
  *  index<主键，记录>: 记录索引，使用 row = index.get(primaryEntry) 可以拿到对应主键的记录
  */
 
@@ -54,8 +54,6 @@ public class Table implements Iterable<Row> {
     for (int i = 0; i < this.columns.size(); i++)
     {
       if (this.columns.get(i).isPrimary()){
-
-
         primaryIndex = i;
         break;
       }
@@ -66,14 +64,6 @@ public class Table implements Iterable<Row> {
     this.xLockSessions = new ArrayList<>();
 
     recover();
-  }
-
-  private void checkNull(ArrayList<Column> columns, ArrayList<Entry> entries){
-    if(columns == null){
-      throw new OperateTableWithNullException("columns");
-    }else if(entries == null){
-      throw new OperateTableWithNullException("entries");
-    }
   }
 
   /**
