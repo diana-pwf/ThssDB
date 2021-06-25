@@ -63,7 +63,7 @@ public class Database {
 
   public String getName() { return name;}
 
-  public void dropTable(String tableName) throws Exception {
+  public void dropTable(String tableName,boolean deleteDatabase) throws Exception {
     try{
       lock.writeLock().lock();
       // 判断表是否存在
@@ -72,6 +72,10 @@ public class Database {
       }
 
       Table table = tables.get(tableName);
+      if(!deleteDatabase){
+        tables.remove(table);
+      }
+
 
       try{
         table.dropSelf();
@@ -219,7 +223,7 @@ public class Database {
       lock.writeLock().lock();
 
       for (Table table: tables.values()) {
-        dropTable(table.tableName);
+        dropTable(table.tableName,true);
       }
 
       // tables.clear();

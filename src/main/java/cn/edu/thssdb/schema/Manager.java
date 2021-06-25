@@ -98,7 +98,7 @@ public class Manager {
 
   }
 
-  public void switchDatabase(String databaseName) {
+  public void switchDatabase(String databaseName) throws Exception {
     try{
       lock.readLock().lock();
 

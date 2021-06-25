@@ -333,7 +333,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         String tableName = visitTable_name(ctx.table_name());
         String msg = "Successfully dropped table: " + tableName + " in database: " + db.getName();
         try{
-            db.dropTable(tableName);
+            db.dropTable(tableName,false);
         }catch (Exception e){
             msg = e.getMessage();
         }
