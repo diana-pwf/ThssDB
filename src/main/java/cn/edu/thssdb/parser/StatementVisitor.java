@@ -1,6 +1,8 @@
 package cn.edu.thssdb.parser;
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
+import cn.edu.thssdb.exception.DuplicatePrimaryKeyException;
+import cn.edu.thssdb.exception.NoPrimaryKeyException;
 import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
@@ -90,22 +92,22 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // update
         if(ctx.update_stmt() != null){
-            return new QueryResult(visitUpdate_stmt(ctx.update_stmt()));
+            return visitUpdate_stmt(ctx.update_stmt());
         }
 
         //
         if(ctx.show_db_stmt() != null){
-            return new QueryResult(visitShow_db_stmt(ctx.show_db_stmt()));
+            return visitShow_db_stmt(ctx.show_db_stmt());
         }
 
         //
         if(ctx.show_table_stmt() != null){
-            return new QueryResult(visitShow_table_stmt(ctx.show_table_stmt()));
+            return visitShow_table_stmt(ctx.show_table_stmt());
         }
 
         //
         if(ctx.show_meta_stmt() != null){
-            return new QueryResult(visitShow_meta_stmt(ctx.show_meta_stmt()));
+            return visitShow_meta_stmt(ctx.show_meta_stmt());
         }
 
         // quit
@@ -127,8 +129,7 @@ public class StatementVisitor extends SQLBaseVisitor{
         String msg = "Successfully created database: " + dbname;
         try {
             manager.createDatabaseIfNotExists(dbname);
-            // TODO: 考虑是否将 recover 放进 createDatabaseIfNotExists 的一环（即一创建就存储数据库名）
-            manager.recover();
+            manager.persist();
         } catch (Exception e){
             msg = e.getMessage();
         }
@@ -186,25 +187,62 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx){
+        Database db = null;
+        try{
+            db = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
+
         String tableName = visitTable_name(ctx.table_name());
-        Database db = manager.getCurrentDatabase();
         String msg = "Successfully created table: " + tableName + " in database: " + db.getName();
 
-        // 建立列
+        // 检查是否指定主键
+        Boolean hasPrimary = false;
         ArrayList<Column> columnList = new ArrayList<>();
-        for(SQLParser.Column_defContext columnDefCtx: ctx.column_def()){
-            columnList.add(visitColumn_def(columnDefCtx));
+        if(ctx.table_constraint() != null){
+            String primaryKeyName = visitTable_constraint(ctx.table_constraint());
+            for(SQLParser.Column_defContext columnDefCtx: ctx.column_def()){
+                Column column = visitColumn_def(columnDefCtx);
+                if(column.getName().equals(primaryKeyName)){
+                    column.setPrimary();
+                    hasPrimary = true;
+                }
+                columnList.add(column);
+            }
         }
-        Column[] columns = columnList.toArray(new Column[0]);
 
-        try{
-            db.createTableIfNotExists(tableName, columns);
-        } catch (Exception e){
-            msg = e.getMessage();
+        // 建立列
+        if(hasPrimary == false){
+            msg = new NoPrimaryKeyException().getMessage();
+        } else {
+            Column[] columns = columnList.toArray(new Column[0]);
+            try{
+                db.createTableIfNotExists(tableName, columns);
+            } catch (Exception e){
+                msg = e.getMessage();
+            }
         }
 
         return new QueryResult(msg);
      }
+
+
+    /**
+     * 返回主键列名
+     * @param ctx
+     * @return 返回主键列名
+     */
+    public String visitTable_constraint(SQLParser.Table_constraintContext ctx) {
+        String keyConstraint = "";
+        int size = ctx.column_name().size();
+        for(int i = 0; i < size; ++i){
+            keyConstraint += ctx.column_name(i).getText().toLowerCase();
+        }
+        return keyConstraint;
+    }
+
 
     /**
      * 读取列定义中的“名字、类型和最大长度、是否为主键和非空的限制”
@@ -219,13 +257,10 @@ public class StatementVisitor extends SQLBaseVisitor{
         // 类型和最大长度
         Pair<ColumnType, Integer> columnType = visitType_name(ctx.type_name());
 
-        // 限制，TODO: 如果返回 null 则创建 exception
+        // 限制
         Pair<Integer, Boolean> columnConstraint = new Pair<>(0, false);
         for(SQLParser.Column_constraintContext constraintCtx: ctx.column_constraint()){
             Pair<Integer, Boolean> constraint = visitColumn_constraint(constraintCtx);
-            if(constraint == null){
-                // TODO: throw new Exception
-            }
             if(constraint.left == 1) columnConstraint.left = 1;
             if(constraint.right == true) columnConstraint.right = true;
         }
@@ -271,22 +306,10 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public Pair<Integer, Boolean> visitColumn_constraint(SQLParser.Column_constraintContext ctx){
-        if(ctx.K_PRIMARY() != null || ctx.K_KEY() != null){
-            if(ctx.K_PRIMARY() != null && ctx.K_KEY() != null) return new Pair<>(1, true);
-            // 解析错误
-            return null;
-        }
-        if(ctx.K_NOT() != null || ctx.K_NULL() != null){
-            if(ctx.K_NOT() != null && ctx.K_NULL() != null) return new Pair<>(0, true);
-            // 解析错误
-            return null;
-        }
+        if(ctx.K_PRIMARY() != null && ctx.K_KEY() != null) return new Pair<>(1, true);
+        if(ctx.K_NOT() != null && ctx.K_NULL() != null) return new Pair<>(0, true);
         return new Pair<>(0, false);
     }
-
-    // FIXME: 搞清楚 visitTable_constraint 在干嘛
-    // @Override
-    // public visitTable_constraint
 
 
     /**
@@ -296,8 +319,14 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitDrop_table_stmt(SQLParser.Drop_table_stmtContext ctx){
+        Database db = null;
+        try{
+            db = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
         String tableName = visitTable_name(ctx.table_name());
-        Database db = manager.getCurrentDatabase();
         String msg = "Successfully dropped table: " + tableName + " in database: " + db.getName();
         try{
             db.dropTable(tableName);
@@ -324,11 +353,17 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitInsert_stmt(SQLParser.Insert_stmtContext ctx){
-        Database db = manager.getCurrentDatabase();
+        Database db = null;
+        try{
+            db = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
         // TODO: find out difference between toString() and getText()
         //       toString = '[' + getText() + ']' （貌似）
         String tableName = visitTable_name(ctx.table_name());
-        Table table = db.getTable(tableName);
+        // Table table = db.getTable(tableName);
         String msg = "Successfully inserted data into the table: " + tableName + " in database: " + db.getName();
 
         // FIXME: naive insert without dealing with transaction and lock
@@ -339,28 +374,16 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // 根据是否指定插入列进行插入操作
-//        if(ctx.column_name() != null)
-        if (ctx.column_name().size() != 0)
-        {
-            ArrayList<String> columnsName = new ArrayList<>();
-            for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
-                columnsName.add(visitColumn_name(columnNameContext));
-            }
-            for(String[] values: valueList){
-                try {
-                    // FIXME: 考虑在 Database 中增加 insert 接口？
-                    table.insert(columnsName, values);
-                } catch (Exception e){
-                    msg = e.getMessage();
-                }
-            }
-        }else{
-            for(String[] values: valueList){
-                try {
-                    table.insert(values);
-                } catch (Exception e){
-                    msg = e.getMessage();
-                }
+
+        ArrayList<String> columnsName = new ArrayList<>();
+        for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
+            columnsName.add(visitColumn_name(columnNameContext));
+        }
+        for(String[] values: valueList){
+            try {
+                db.insert(tableName, columnsName, values);
+            } catch (Exception e){
+                msg = e.getMessage();
             }
         }
 
@@ -374,27 +397,23 @@ public class StatementVisitor extends SQLBaseVisitor{
      */
     @Override
     public QueryResult visitDelete_stmt(SQLParser.Delete_stmtContext ctx){
-        Database db = manager.getCurrentDatabase();
+        Database db = null;
+        try{
+            db = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
         String tableName = visitTable_name(ctx.table_name());
-        Table table = db.getTable(tableName);
         String msg = "";
 
         // FIXME: naive delete without dealing with transaction and lock
-        MultipleCondition conditions = null;
-        if (ctx.K_WHERE() == null) {
-            try{
-                // FIXME: 考虑在 Database 中增加 delete 接口？
-                msg.concat("Successfully deleted " + table.delete(null) + " data from the table: " + tableName);
-            } catch (Exception e){
-                msg.concat(e.getMessage());
-            }
-        }else{
-            conditions = visitMultiple_condition(ctx.multiple_condition());
-            try{
-                msg.concat("Successfully deleted " + table.delete(conditions) + " data from the table: " + tableName);
-            } catch (Exception e){
-                msg.concat(e.getMessage());
-            }
+
+        MultipleCondition conditions = (ctx.K_WHERE() == null ? null : visitMultiple_condition(ctx.multiple_condition()));
+        try{
+            msg = "Successfully deleted " + db.delete(tableName, conditions) + " data from the table: " + tableName;
+        } catch (Exception e){
+            msg = e.getMessage();
         }
         return new QueryResult(msg);
     }
@@ -434,6 +453,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     /** 执行select指令 **/
     @Override
     public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx){
+
         Database database = manager.getCurrentDatabase();
         if(database == null) {
             throw new DatabaseNotExistException();
@@ -490,12 +510,18 @@ public class StatementVisitor extends SQLBaseVisitor{
 
     /** 执行update指令 **/
     @Override
-    public String visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
-        Database database = manager.getCurrentDatabase();
+    public QueryResult visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
+        Database database = null;
+        try{
+            database = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
 
-        String table_name = visitTable_name(ctx.table_name());
+        String tableName = visitTable_name(ctx.table_name());
 
-        String column_name = visitColumn_name(ctx.column_name());
+        String columnName = visitColumn_name(ctx.column_name());
 
         Comparer comparer = visitExpression(ctx.expression());
 
@@ -504,48 +530,68 @@ public class StatementVisitor extends SQLBaseVisitor{
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
+        String msg = "";
         // TODO: 考虑事务
         try{
-            return database.update(table_name, column_name, comparer, conditions);
+            msg = "Successfully updated " + database.update(tableName, columnName, comparer, conditions) +
+                    " data from the table: " + tableName;
         }
         catch (Exception e) {
-            return e.toString();
+            msg = e.getMessage();
         }
-
+        return new QueryResult(msg);
     }
 
     /** 执行show db指令 **/
     @Override
-    public String visitShow_db_stmt(SQLParser.Show_db_stmtContext ctx) {
+    public QueryResult visitShow_db_stmt(SQLParser.Show_db_stmtContext ctx) {
+        String msg;
         try {
-            return manager.ShowAllDatabases();
+            msg = manager.ShowAllDatabases();
         } catch (Exception e) {
-            return e.getMessage();
+            msg = e.getMessage();
         }
+        return new QueryResult(msg);
     }
 
     /** 执行show table指令 **/
     @Override
-    public String visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
-        Database database = manager.getCurrentDatabase();
-        try {
-            return database.showAllTables();
-        } catch (Exception e) {
-            return e.getMessage();
+    public QueryResult visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
+        Database database = null;
+        try{
+            database = getCurrentDB();
         }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
+        }
+        String msg;
+        try {
+            msg = database.showAllTables();
+        } catch (Exception e) {
+            msg = e.getMessage();
+        }
+        return new QueryResult(msg);
     }
 
     /** 执行show meta指令 **/
     @Override
-    public String visitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx) {
+    public QueryResult visitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx) {
         if (ctx.table_name() != null){
-            String tableName = visitTable_name(ctx.table_name());
-            Database database = manager.getCurrentDatabase();
-            try {
-                return database.showTableMeta(tableName);
-            } catch (Exception e) {
-                return e.getMessage();
+            String msg;
+            Database database = null;
+            try{
+                database = getCurrentDB();
             }
+            catch (Exception e){
+                return new QueryResult(e.getMessage());
+            }
+            String tableName = visitTable_name(ctx.table_name());
+            try {
+                msg = database.showTableMeta(tableName);
+            } catch (Exception e) {
+                msg = e.getMessage();
+            }
+            return new QueryResult(msg);
         }
         return null;
     }
@@ -574,7 +620,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     @Override
     public Condition visitCondition(SQLParser.ConditionContext ctx) {
         Comparer left = visitExpression(ctx.expression(0));
-        Comparer right = visitExpression(ctx.expression(0));
+        Comparer right = visitExpression(ctx.expression(1));
         ComparatorType type = visitComparator(ctx.comparator());
         return new Condition(left, right, type);
     }
@@ -639,6 +685,20 @@ public class StatementVisitor extends SQLBaseVisitor{
     }
 
 
+    private Database getCurrentDB() {
+        Database current_base = manager.getCurrentDatabase();
+        if(current_base == null) {
+            throw new DatabaseNotExistException();
+        }
+        return current_base;
+    }
+
+    public QueryTable visitQueryTable() {
+        // TODO: 单一表
+
+        // TODO: 处理复合逻辑
+
+        return null;
 
     // @Override
     public QueryTable visitTableQuery_stmt(SQLParser.Table_queryContext ctx) {

@@ -2,6 +2,7 @@ package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.index.BPlusTree;
 import cn.edu.thssdb.query.*;
+import cn.edu.thssdb.type.ResultType;
 import cn.edu.thssdb.utils.Pair;
 
 import cn.edu.thssdb.helper.*;
@@ -26,18 +27,24 @@ public class Table implements Iterable<Row> {
   public String databaseName;
   public String tableName;
   public ArrayList<Column> columns;
+  // 列名列表
+  private ArrayList<String> columnsName;
   public int schemaLength;
   public BPlusTree<Entry, Row> index;
   private int primaryIndex;
   public ArrayList<Entry> entries;
 
   public Table(String databaseName, String tableName, Column[] columns) {
+    this.lock = new ReentrantReadWriteLock();
     this.databaseName = databaseName;
     this.tableName = tableName;
     this.columns = new ArrayList<>(Arrays.asList(columns));
+    this.columnsName = new ArrayList<>();
+    for(Column column: this.columns){
+      this.columnsName.add(column.getName());
+    }
     this.schemaLength = this.columns.size();
     this.index = new BPlusTree<>();
-    this.lock = new ReentrantReadWriteLock();
     // 记录 primary key 的位置 primary index
     for (int i = 0; i < this.columns.size(); i++)
     {
@@ -46,7 +53,8 @@ public class Table implements Iterable<Row> {
         break;
       }
     }
-    this.lock = new ReentrantReadWriteLock();
+    this.entries = new ArrayList<>();
+    recover();
   }
 
   private void checkNull(ArrayList<Column> columns, ArrayList<Entry> entries){
@@ -58,56 +66,28 @@ public class Table implements Iterable<Row> {
   }
 
   /**
-   * FIXME: redundant
-   * @param columns
-   * @param entries
-   * @param equal
-   */
-  private void checkLen(ArrayList<Column> columns, ArrayList<Entry> entries, boolean equal){
-    int columnsLen = columns.size();
-    int entriesLen = entries.size();
-    if(equal){
-      if(columnsLen != schemaLength){
-        throw new SchemaLengthMismatchException(schemaLength, columnsLen, "columns");
-      }else if(entriesLen != schemaLength){
-        throw new SchemaLengthMismatchException(schemaLength, entriesLen, "entries");
-      }
-    }else{
-      if(columnsLen > schemaLength){
-        throw new ExceedSchemaLengthException(schemaLength, columnsLen, "columns");
-      }else if(entriesLen > schemaLength) {
-        throw new ExceedSchemaLengthException(schemaLength, entriesLen, "entries");
-      }else if(columnsLen != entriesLen){
-        throw new SchemaLengthMismatchException(columnsLen, entriesLen, "columns");
-      }
-    }
-  }
-
-
-  /**
    *  功能：传入欲查询记录主 entry，返回对应的一行记录
    *  参数：entry为待查询记录的主 entry
    */
   public Row getRow(Entry entry){
-    Row row;
     try{
-      row = index.get(entry);
+      return index.get(entry);
     }catch (Exception e){
       throw e;
     }
-    return row;
   }
 
   /**
    * 功能：给定一个 ArrayList<Entry>，实际将数据插入表中
-   * @param entry_list
-   * TODO: 页式存储修改
+   * @param entryList
+   * TODO: 页式存储修改时应该只需要修改这部分。
    */
-  public void insert(ArrayList<Entry> entry_list) {
+  public void insertEntries(ArrayList<Entry> entryList) {
     try{
       lock.writeLock().lock();
-      index.put(entry_list.get(primaryIndex), new Row(entry_list.toArray(new Entry[0])));
-      entries.add(entry_list.get(primaryIndex));
+      // put 里面自己有检测 duplicated key
+      index.put(entryList.get(primaryIndex), new Row(entryList.toArray(new Entry[0])));
+      entries.add(entryList.get(primaryIndex));
     }catch (Exception e){
       throw e;
     }finally{
@@ -146,23 +126,28 @@ public class Table implements Iterable<Row> {
       }
     }
 
-    insert(rowEntries);
+    insertEntries(rowEntries);
   }
 
   /**
    * 功能：给定一个 Column 列表和 String 列表，依 columns 和 values 的对应位置构建一个 ArrayList<Entry>
    *     之后传给 insert(ArrayList<Entry> entry_list) 真正进行插入
-   * @param columnNames: specifying 要插入的列
+   * @param columnsName: specifying 要插入的列
    * @param values: 要插入的值（以 String[] 传入）
    */
-  public void insert(ArrayList<String> columnNames, String[] values){
+  public void insert(ArrayList<String> columnsName, String[] values){
+    if(columnsName.size() == 0){
+      insert(values);
+      return;
+    }
+
     if(values == null){
       throw new OperateTableWithNullException("value");
     } else if(columns == null){
       throw new OperateTableWithNullException("column");
     }
 
-    int columnsLen = columns.size();
+    int columnsLen = columnsName.size();
     int valuesLen = values.length;
     if(columnsLen > schemaLength){
       throw new ExceedSchemaLengthException(schemaLength, columnsLen, "columns");
@@ -172,18 +157,13 @@ public class Table implements Iterable<Row> {
       throw new SchemaLengthMismatchException(columnsLen, valuesLen, "columns");
     }
 
-    // 建立列名列表
-    ArrayList<String> names = new ArrayList<>();
-    for(int i = 0; i < columnsLen; i++){
-      names.add(this.columns.get(i).getName());
-    }
-    // 检查是否有重复 column 或有未定义 column
-    for(String name: columnNames){
-      int index = names.indexOf(name);
+    // 检查是否有未定义 column 或重复 column
+    for(String name: columnsName){
+      int index = this.columnsName.indexOf(name);
       if(index < 0){
         throw new ColumnNotExistException(databaseName, tableName, name);
       }
-      if(index != columnNames.lastIndexOf(name)){
+      if(index != this.columnsName.lastIndexOf(name)){
         throw new DuplicateColumnException(name);
       }
     }
@@ -192,13 +172,14 @@ public class Table implements Iterable<Row> {
     Comparable value;
     ValueParser vp = new ValueParser();
 
+    // 按表的列序构造 entry
     for(Column col : this.columns){
+      int index = columnsName.indexOf(col.getName());
       value = null;
-      for(int i = 0; i < columnsLen; i++){
-        if(col.getName().compareTo(columnNames.get(i)) != 0) continue;
+      // 当前列被指定
+      if(index > -1){
         try {
-          value = vp.getValue(col, values[i]);
-          break;
+          value = vp.getValue(col, values[index]);
         } catch (Exception e){
           throw e;
         }
@@ -210,8 +191,7 @@ public class Table implements Iterable<Row> {
         throw e;
       }
     }
-
-    insert(rowEntries);
+    insertEntries(rowEntries);
   }
 
 
@@ -238,18 +218,47 @@ public class Table implements Iterable<Row> {
    */
 
   // FIXME: use multipleCondition to delete,
-  public String delete(MultipleCondition condition){
+  public String delete(MultipleCondition conditions){
     Integer count = 0;
     for(Row row : this){
-      // if(condition != null && condition.JudgeMultipleCondition(new QueryRow(new MetaInfo())) == false ) continue;
-      deleteEntry(row.getEntries().get(primaryIndex));
-      ++count;
+      MetaInfo info = new MetaInfo(databaseName, tableName, columns);
+      QueryRow queryRow = new QueryRow(info, row);
+      MultipleCondition condition = conditions;
+      if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
+        try{
+          deleteEntry(row.getEntries().get(primaryIndex));
+        } catch(Exception e){
+          throw e;
+        }
+        ++count;
+      }
     }
+    // FIXME: change return value
     return count.toString();
   }
 
-  public void drop(){
-    
+  // TODO:事务处理
+  public void dropSelf() throws Exception {
+    try {
+      lock.writeLock().lock();
+      columns.clear();
+      index = null;
+      entries.clear();
+      columns.clear();
+      String filename = "DATA/" + databaseName + "_" + tableName + ".data";
+      File file = new File(filename);
+      if (file.isFile() && file.exists()) {
+        if (file.delete()) {
+          System.out.println("successfully drop table " + tableName);
+        } else {
+          throw new Exception("Error occurs when drop table" + tableName);
+        }
+      }
+    }catch (Exception e){
+      throw  e;
+    }finally {
+      lock.writeLock().unlock();
+    }
   }
 
   /**
@@ -257,18 +266,8 @@ public class Table implements Iterable<Row> {
    *  功能：提供待修改记录的主 entry，将根据传入参数修改 row
    *  参数：entry为待修改记录的主 entry，columns 和 entries 是要修改的对应属性和值
    */
+  /*
   public void update(Entry primaryEntry, ArrayList<Column> columns, ArrayList<Entry> entries) {
-    // check whether there is null columns or entries
-    // check whether the length of columns and entries is preferable
-    /*
-    try{
-      checkNull(columns, entries);
-      checkLen(columns, entries, false);
-    }catch (Exception e){
-      throw e;
-    }
-    */
-
     Row row = this.getRow(primaryEntry);
     int columnsLen = columns.size();
     int schemaIndex = 0, columnIndex = 0;
@@ -289,15 +288,69 @@ public class Table implements Iterable<Row> {
     }
   }
 
+   */
+
 
   /**
-   *  TODO:
    *  参数：columnName为要更新的那一列的属性名称，comparer为待更新的值， conditions为where后所接的条件表达式
    *  功能：将满足条件表达式的行的相应属性更新为相应的值
    *  返回值：向客户端说明执行情况
    */
   public String update(String columnName, Comparer comparer, MultipleCondition conditions) {
-    return "";
+    Integer count = 0;
+    // 取得修改的位置
+    int index = this.columnsName.indexOf(columnName);
+    // 没有找到对应列
+    if(index < 0){
+      throw new ColumnNotExistException(databaseName, tableName, columnName);
+    }
+    for(Row row : this){
+      MetaInfo info = new MetaInfo(databaseName, tableName, columns);
+      QueryRow queryRow = new QueryRow(info, row);
+      MultipleCondition condition = new MultipleCondition(conditions);
+      if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
+        // 取得主键
+        Entry entry = queryRow.getEntries().get(primaryIndex);
+
+        // 取得旧行并构建新行
+        Row oldRow = getRow(entry);
+        Column column = this.columns.get(index);
+        ValueParser vp = new ValueParser();
+
+        Comparable newValue;
+        Comparable oldValue = oldRow.getEntries().get(index).value;
+        try {
+          newValue = vp.compararToComparable(column, comparer);
+          vp.checkValid(column, newValue);
+        } catch (Exception e){
+          throw e;
+        }
+        Row newRow = new Row(oldRow.getEntries().toArray(new Entry[0]));
+        newRow.getEntries().get(index).value = newValue;
+
+        // 分为是否更新主键有不同操作
+        if(column.isPrimary() && oldValue != newValue){
+          try{
+            // 先插入，检查是否有冲突
+            insertEntries(newRow.getEntries());
+            // 没有冲突才更新 entries
+            entries.remove(entry);
+            entries.add(newRow.getEntries().get(primaryIndex));
+          } catch (Exception e){
+            throw e;
+          }
+        }else {
+          try {
+            this.index.update(entry, newRow);
+          } catch (Exception e) {
+            throw e;
+          }
+        }
+        ++count;
+      }
+    }
+
+    return count.toString();
   }
 
 

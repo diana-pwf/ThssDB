@@ -6,7 +6,7 @@ import cn.edu.thssdb.type.ColumnType;
 import java.util.ArrayList;
 import java.util.List;
 
-class MetaInfo {
+public class MetaInfo {
 
   private String tableName;
   private List<Column> columns;

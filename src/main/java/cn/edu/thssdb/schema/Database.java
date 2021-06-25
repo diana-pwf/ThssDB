@@ -6,6 +6,7 @@ import cn.edu.thssdb.query.QueryResult;
 import cn.edu.thssdb.query.QueryTable;
 import cn.edu.thssdb.query.MultipleCondition;
 import cn.edu.thssdb.type.ColumnType;
+import javafx.scene.control.Tab;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -31,46 +32,68 @@ public class Database {
     }
   }
 
-  public void createTableIfNotExists(String tableName, Column[] tableColumns) {
+  public void createTableIfNotExists(String tableName, Column[] tableColumns) throws IOException {
     try{
       lock.writeLock().lock();
       // 若哈希表中没有该表名称，则新建并加入
       if (!tables.containsKey(tableName)) {
         Table table = new Table(name, tableName, tableColumns);
         tables.put(tableName, table);
+        persist();
       }
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
   }
 
+  // FIXME: 异常处理
   public Table getTable(String tableName){
-    return tables.get(tableName);
+    Table table = tables.get(tableName);
+    if(table == null){
+      throw new TableNotExistException(tableName);
+    }
+    return table;
   }
 
   public String getName() { return name;}
 
-  public void dropTable(String tableName) {
+  public void dropTable(String tableName) throws Exception {
     try{
       lock.writeLock().lock();
       // 判断表是否存在
       if (!tables.containsKey(tableName)) {
-        throw new TableNotExistException();
+        throw new TableNotExistException(tableName);
       }
 
       Table table = tables.get(tableName);
 
-      // TODO: 取决于Table类中的drop函数实现
-      // TODO: 可以再检查是否已删除表对应的记录文件
-      table.drop();
-
+      try{
+        table.dropSelf();
+      }catch (Exception e){
+        e.printStackTrace();
+        throw e;
+      }
+      finally {
+        String path = "DATA/"+"meta_"+name+"_"+tableName+".data";
+        File file = new File(path);
+        if(file.exists()&&file.isFile()){
+          if(file.delete()){
+            System.out.println("successfully drop table "+tableName+"meta file!");
+          }
+          else{
+            throw new Exception("Error occurs when drop table "+tableName+"meta file!");
+          }
+        }
+      }
       table = null;
       tables.remove(tableName);
 
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -83,9 +106,31 @@ public class Database {
     return null;
   }
 
+  public void insert(String tableName, ArrayList<String> columnsName, String[] values){
+    try {
+      Table table = getTable(tableName);
+      table.insert(columnsName, values);
+    } catch (Exception e){
+      throw e;
+    }
+  }
+
+  public String delete(String tableName, MultipleCondition condition){
+    try {
+      Table table = getTable(tableName);
+      return table.delete(condition);
+    } catch (Exception e){
+      throw e;
+    }
+  }
+
   public String update(String tableName, String columnName, Comparer comparer, MultipleCondition conditions) {
-    Table table = getTable(tableName);
-    return table.update(columnName, comparer, conditions);
+    try{
+      Table table = getTable(tableName);
+      return table.update(columnName, comparer, conditions);
+    } catch (Exception e){
+      throw e;
+    }
   }
 
   public void persist() throws IOException {
@@ -118,8 +163,8 @@ public class Database {
         String tableName = index[2];
         ArrayList<Column> columns = new ArrayList<>();
         BufferedReader reader = new BufferedReader(new FileReader(file));
-        while (reader.readLine()!=null) {
-          String str = reader.readLine();
+        String str = reader.readLine();
+        while (str!=null) {
           String[] colAttrs = str.split(",");
           String name = colAttrs[0];
           ColumnType type = ColumnType.valueOf(colAttrs[1]);
@@ -127,6 +172,7 @@ public class Database {
           boolean notNull = Boolean.parseBoolean(colAttrs[3]);
           int maxLength = Integer.parseInt(colAttrs[4]);
           columns.add(new Column(name,type,primary,notNull,maxLength));
+          str = reader.readLine();
         }
         createTableIfNotExists(tableName,columns.toArray(new Column[0]));
         reader.close();
@@ -134,7 +180,7 @@ public class Database {
     }
   }
 
-  public void quit(){
+  public void quit() throws IOException {
     try {
       lock.writeLock().lock();
       for (Table table : tables.values()) {
@@ -143,25 +189,27 @@ public class Database {
       persist();
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
   }
 
-  public void dropSelf() {
+  public void dropSelf() throws Exception {
     try{
       lock.writeLock().lock();
-
-      // TODO: 删除 database对应的文件
 
       for (Table table: tables.values()) {
         dropTable(table.tableName);
       }
+
+
       // tables.clear();
       tables = null;
 
     } catch (Exception e) {
       e.printStackTrace();
+      throw e;
     } finally {
       lock.writeLock().unlock();
     }
@@ -169,6 +217,9 @@ public class Database {
 
   public String showTableMeta(String tableName) {
     Table table = getTable(tableName);
+    if(table == null){
+      throw new TableNotExistException(tableName);
+    }
     return table.showMeta();
   }
 

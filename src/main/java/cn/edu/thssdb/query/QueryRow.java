@@ -87,9 +87,9 @@ public class QueryRow extends Row {
                 seqIndex += metaInfo.getColumnSize();
             }
             if(!tableExist){
-                throw new TableNotExistException();
+                throw new TableNotExistException(tableName);
             }
-            return new Comparer(type, (String) entries.get(seqIndex).value);
+            return new Comparer(type, String.valueOf(entries.get(seqIndex).value));
         }
 
         // column
@@ -105,7 +105,7 @@ public class QueryRow extends Row {
                type = columnType2ComparerType(metaInfo.columnFindType(idx));
                if(!columnExist)
                {
-                   comparer = new Comparer(type,(String) entries.get(seqIndex+idx).value);
+                   comparer = new Comparer(type,String.valueOf(entries.get(seqIndex+idx).value));
                    columnExist = true;
                }
                else{
