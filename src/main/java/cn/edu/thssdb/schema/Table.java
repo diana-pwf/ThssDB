@@ -166,7 +166,7 @@ public class Table implements Iterable<Row> {
         throw new ColumnNotExistException(databaseName, tableName, name);
       }
       if(index != this.columnsName.lastIndexOf(name)){
-        throw new DuplicateColumnException(name);
+        throw new DuplicateColumnException("insert", name);
       }
     }
 
