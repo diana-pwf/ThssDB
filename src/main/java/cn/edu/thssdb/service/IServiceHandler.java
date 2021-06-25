@@ -85,6 +85,8 @@ public class IServiceHandler implements IService.Iface {
     String[] statements = req.getStatement().split(";");
     ArrayList<QueryResult> queryResults = new ArrayList<QueryResult>();
     for (String statement : statements) {
+      // 对空白符有做一些处理
+
       statement = statement.trim();
 
       // 无内容则跳过
@@ -92,11 +94,17 @@ public class IServiceHandler implements IService.Iface {
         continue;
       }
 
-      // TODO: 可以对空白符做一些处理
-      String command = statement;
-      // TODO: 考虑事务
-      ArrayList<QueryResult> result = handleCommand(command, req.sessionId, manager);
-      queryResults.addAll(result);
+      String command = statement.split(" ")[0].toLowerCase();
+      if (!manager.transactionSessions.contains(req.sessionId) && (command.equals("insert") || command.equals("update") || command.equals("delete") || command.equals("select"))) {
+        handleCommand("auto begin transaction", req.sessionId, manager);
+        ArrayList<QueryResult> result = handleCommand(statement, req.sessionId, manager);
+        queryResults.addAll(result);
+        handleCommand("auto commit", req.sessionId, manager);
+      }
+      else {
+        ArrayList<QueryResult> result = handleCommand(statement, req.sessionId, manager);
+        queryResults.addAll(result);
+      }
 
     }
 
@@ -140,6 +148,13 @@ public class IServiceHandler implements IService.Iface {
 
 
   public ArrayList<QueryResult> handleCommand(String command, long sessionId, Manager manager) {
+    String cmd = command.split(" ")[0].toLowerCase();
+
+    if (sessionId == 0 && (cmd.equals("insert") || cmd.equals("update") || cmd.equals("delete") || cmd.equals("select"))) {
+      manager.writeLog(command);
+    }
+
+
     //词法分析
     SQLLexer lexer = new SQLLexer(CharStreams.fromString(command));
     lexer.removeErrorListeners();
@@ -153,7 +168,7 @@ public class IServiceHandler implements IService.Iface {
 
     //语义分析
     try {
-      StatementVisitor visitor = new StatementVisitor(manager, sessionId);   //测试默认session-999
+      StatementVisitor visitor = new StatementVisitor(manager, sessionId);
       return visitor.visitParse(parser.parse());
     } catch (Exception e) {
       ArrayList<QueryResult> queryResult = new ArrayList<QueryResult>();
@@ -162,5 +177,8 @@ public class IServiceHandler implements IService.Iface {
     }
 
   }
+
 }
+
+
 

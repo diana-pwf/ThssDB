@@ -117,6 +117,11 @@ public class Database {
 
 
   }
+  // todo: select函数
+  public QueryResult select(ArrayList<String> columnNames, QueryTable queryTable, MultipleCondition conditions, Boolean distinct) {
+    return new QueryResult("");
+  }
+
 
   public void insert(String tableName, ArrayList<String> columnsName, String[] values){
     try {

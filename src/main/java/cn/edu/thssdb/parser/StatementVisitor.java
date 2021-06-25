@@ -4,6 +4,7 @@ import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.exception.DuplicateColumnException;
 import cn.edu.thssdb.exception.DuplicatePrimaryKeyException;
 import cn.edu.thssdb.exception.NoPrimaryKeyException;
+import cn.edu.thssdb.exception.NotSelectTableException;
 import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
@@ -15,9 +16,14 @@ import cn.edu.thssdb.type.ComparatorType;
 import cn.edu.thssdb.type.ComparerType;
 import cn.edu.thssdb.type.ConditionType;
 
+import javax.management.Query;
 import javax.xml.crypto.Data;
 import java.awt.image.AreaAveragingScaleFilter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.StringJoiner;
 
 public class StatementVisitor extends SQLBaseVisitor{
@@ -85,6 +91,22 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // quit
         if(ctx.quit_stmt() != null){ return visitQuit_stmt(ctx.quit_stmt());}
+
+        if (ctx.begin_transaction_stmt() != null) {
+            return new QueryResult(visitBegin_transaction_stmt(ctx.begin_transaction_stmt()));
+        }
+
+        if (ctx.commit_stmt() != null) {
+            return new QueryResult(visitCommit_stmt(ctx.commit_stmt()));
+        }
+
+        if (ctx.auto_begin_transaction_stmt() != null) {
+            return new QueryResult(visitAuto_begin_transaction_stmt(ctx.auto_begin_transaction_stmt()));
+        }
+
+        if (ctx.auto_commit_stmt() != null) {
+            return new QueryResult(visitAuto_commit_stmt(ctx.auto_commit_stmt()));
+        }
 
         return null;
     }
@@ -160,7 +182,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx){
         Database db = null;
         try{
-            db = getCurrentDB();
+            db = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -303,7 +325,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitDrop_table_stmt(SQLParser.Drop_table_stmtContext ctx){
         Database db = null;
         try{
-            db = getCurrentDB();
+            db = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -337,7 +359,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitInsert_stmt(SQLParser.Insert_stmtContext ctx){
         Database db = null;
         try{
-            db = getCurrentDB();
+            db = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -356,6 +378,63 @@ public class StatementVisitor extends SQLBaseVisitor{
         for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
             columnsName.add(visitColumn_name(columnNameContext));
         }
+
+        if (!manager.transactionSessions.contains(session)) {
+            for(String[] values: valueList){
+                try {
+                    db.insert(tableName, columnsName, values);
+                } catch (Exception e){
+                    msg = e.getMessage();
+                }
+            }
+            return new QueryResult(msg);
+        }
+
+        // session在事务中
+        Table table = db.getTable(tableName);
+        while (true) {
+            if (!manager.blockedSessions.contains(session)) {
+                // 尚未被阻塞，看看能不能加x锁
+
+                // 能加锁/成功，跳出循环正常执行
+                int result = table.getXLock(session);
+                if (result != -1) {
+                    if (result == 1) {
+                        // 能加锁
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    // 移出等待队列
+                    manager.blockedSessions.remove(session);
+                    break;
+                }
+                // 不能则加入等待队列
+                manager.blockedSessions.add(session);
+            }
+            else if (manager.blockedSessions.get(0).equals(session)) {
+                int result = table.getXLock(session);
+                if (result != -1)
+                {
+                    if (result == 1)
+                    {
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    manager.blockedSessions.remove(0);
+                    break;
+                }
+            }
+            // 因为阻塞，所以休眠一会  -- 繁忙等待
+            try {
+                Thread.sleep(300);
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+
         for(String[] values: valueList){
             try {
                 db.insert(tableName, columnsName, values);
@@ -363,8 +442,8 @@ public class StatementVisitor extends SQLBaseVisitor{
                 msg = e.getMessage();
             }
         }
-
         return new QueryResult(msg);
+
     }
 
     /**
@@ -376,7 +455,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitDelete_stmt(SQLParser.Delete_stmtContext ctx){
         Database db = null;
         try{
-            db = getCurrentDB();
+            db = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -384,9 +463,65 @@ public class StatementVisitor extends SQLBaseVisitor{
         String tableName = visitTable_name(ctx.table_name());
         String msg = "";
 
-        // FIXME: naive delete without dealing with transaction and lock
-
         MultipleCondition conditions = (ctx.K_WHERE() == null ? null : visitMultiple_condition(ctx.multiple_condition()));
+
+        // 不在事务中正常执行
+        if (!manager.transactionSessions.contains(session)) {
+            try{
+                msg = "Successfully deleted " + db.delete(tableName, conditions) + " data from the table: " + tableName;
+            } catch (Exception e){
+                msg = e.getMessage();
+            }
+            return new QueryResult(msg);
+        }
+
+        Table table = db.getTable(tableName);
+
+        while (true) {
+            if (!manager.blockedSessions.contains(session)) {
+                // 尚未被阻塞，看看能不能加x锁
+
+                // 能加锁/成功，跳出循环正常执行
+                int result = table.getXLock(session);
+                if (result != -1) {
+                    if (result == 1) {
+                        // 能加锁
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    // 移出等待队列
+                    manager.blockedSessions.remove(session);
+                    break;
+                }
+                // 不能则加入等待队列
+                manager.blockedSessions.add(session);
+            }
+            else if (manager.blockedSessions.get(0).equals(session)) {
+                // 已经被阻塞，看看本次能否轮到
+
+                int result = table.getXLock(session);
+                if (result != -1)
+                {
+                    if (result == 1)
+                    {
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    manager.blockedSessions.remove(0);
+                    break;
+                }
+            }
+            // 因为阻塞，所以休眠一会  -- 繁忙等待
+            try {
+                Thread.sleep(300);
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+
         try{
             msg = db.delete(tableName, conditions);
         } catch (Exception e){
@@ -429,7 +564,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
     /** 执行select指令 **/
     @Override
-    public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx){
+    public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx) {
 
         Database database = null;
         try{
@@ -449,7 +584,6 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // column 处理
-
         int columnNum = ctx.result_column().size();
         String[] columnNames = new String[columnNum];
         for (int i = 0; i < columnNum; i++) {
@@ -479,9 +613,77 @@ public class StatementVisitor extends SQLBaseVisitor{
 
 
         // 若session不在事务中，直接执行
+        if (!manager.transactionSessions.contains(session)) {
+            try {
+                // TODO
+                return database.select(columnNames, queryTable, conditions, distinct);
+            } catch (Exception e) {
+                return new QueryResult(e.toString());
+            }
+        }
 
+        ArrayList<String> tableNames = new ArrayList<String>();
+        for (SQLParser.Table_nameContext subctx : ctx.table_query(0).table_name()) {
+            tableNames.add(subctx.getText().toLowerCase());
+        }
+
+        while (true) {
+            if (!manager.blockedSessions.contains(session)) {
+                // 尚未被阻塞，看看能不能加s锁
+                int index;
+                boolean blocked = false;
+                for (index = 0; index < tableNames.size(); index++) {
+                    Table table = database.getTable(tableNames.get(index));
+                    if (table.getSLock(session) == -1) {
+                        blocked = true;
+                        break;
+                    }
+                }
+                // 不能加锁，加入等待队列
+                if (blocked) {
+                    for (int i = 0; i < index; i++) {
+                        Table table = database.getTable(tableNames.get(i));
+                        table.freeSLock(session);
+                    }
+                    manager.blockedSessions.add(session);
+                }
+                // 能加锁，跳出循环正常执行
+                else {
+                    break;
+                }
+            }
+            else if (manager.blockedSessions.get(0).equals(session)) {
+                // 已经被阻塞，看看本次能否轮到
+                // todo: 为啥只看队列开头第一个
+                int index;
+                boolean blocked = false;
+                for (index = 0; index < tableNames.size(); index++) {
+                    Table table = database.getTable(tableNames.get(index));
+                    if (table.getSLock(session) == -1) {
+                        blocked = true;
+                        break;
+                    }
+                }
+                if (!blocked) {
+                    manager.blockedSessions.remove(session);
+                    break;
+                }
+            }
+            // 因为阻塞，所以休眠一会  -- 繁忙等待
+            try {
+                Thread.sleep(300);
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+
+        // 在事务中正常执行
         try {
-            // TODO
+            for (String table_name : tableNames) {
+                Table table = database.getTable(table_name);
+                table.freeSLock(session);
+            }
             return database.select(columnNames, queryTable, conditions, distinct);
         } catch (Exception e) {
             return new QueryResult(e.toString());
@@ -500,7 +702,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
         Database database = null;
         try{
-            database = getCurrentDB();
+            database = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -517,14 +719,71 @@ public class StatementVisitor extends SQLBaseVisitor{
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
-        String msg = "";
-        try{
-            msg = database.update(tableName, columnName, comparer, conditions);
+        // todo: 为啥sgl的里面 conditions为null时不加事务
+        Table table = database.getTable(tableName);
+
+        // 不在事务中正常执行
+        if (!manager.transactionSessions.contains(session)) {
+            try {
+                // table.freeXLock(session);
+                return new QueryResult(database.update(tableName, columnName, comparer, conditions));
+            } catch (Exception e) {
+                return new QueryResult(e.toString());
+            }
         }
-        catch (Exception e) {
-            msg = e.getMessage();
+
+        while (true) {
+            if (!manager.blockedSessions.contains(session)) {
+                // 尚未被阻塞，看看能不能加x锁
+
+                // 能加锁/成功，跳出循环正常执行
+                int result = table.getXLock(session);
+                if (result != -1) {
+                    if (result == 1) {
+                    // 能加锁
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    // 移出等待队列
+                    manager.blockedSessions.remove(session);
+                    break;
+                }
+                // 不能则加入等待队列
+                manager.blockedSessions.add(session);
+            }
+            else if (manager.blockedSessions.get(0).equals(session)) {
+                // 已经被阻塞，看看本次能否轮到
+
+                int result = table.getXLock(session);
+                if (result != -1)
+                {
+                    if (result == 1)
+                    {
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    manager.blockedSessions.remove(0);
+                    break;
+                }
+            }
+            // 因为阻塞，所以休眠一会  -- 繁忙等待
+            try {
+                Thread.sleep(300);
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
         }
-        return new QueryResult(msg);
+
+        try {
+            // table.freeXLock(session);
+            return new QueryResult(database.update(tableName, columnName, comparer, conditions));
+        } catch (Exception e) {
+            return new QueryResult(e.toString());
+        }
+
     }
 
     /** 执行show db指令 **/
@@ -544,7 +803,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
         Database database = null;
         try{
-            database = getCurrentDB();
+            database = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -565,7 +824,7 @@ public class StatementVisitor extends SQLBaseVisitor{
             String msg;
             Database database = null;
             try{
-                database = getCurrentDB();
+                database = manager.getCurrentDatabase();
             }
             catch (Exception e){
                 return new QueryResult(e.getMessage());
@@ -580,6 +839,133 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
         return null;
     }
+
+    /**
+     * 执行开始事务的指令
+     * @param ctx
+     * @return 返回开始事务的信息或创建失败的原因
+     */
+    @Override
+    public String visitBegin_transaction_stmt(SQLParser.Begin_transaction_stmtContext ctx){
+        try {
+            if (manager.transactionSessions.contains(session)) {
+                return "already in transaction";
+            }
+            manager.transactionSessions.add(session);
+            manager.sLockDict.put(session, new ArrayList<String>());
+            manager.xLockDict.put(session, new ArrayList<String>());
+            return "successfully begin transaction";
+        }
+        catch (Exception e) {
+            return e.getMessage();
+        }
+
+    }
+
+    /**
+     * 执行提交事务的指令
+     * @param ctx
+     * @return 返回提交事务的信息或创建失败的原因
+     */
+    @Override
+    public String visitCommit_stmt(SQLParser.Commit_stmtContext ctx){
+        try {
+            if (!manager.transactionSessions.contains(session)) {
+                return "not in transaction";
+            }
+            manager.transactionSessions.remove(session);
+            // 不直接移除,要保留 key 和空的 value
+            Database database = manager.getCurrentDatabase();
+            for (String tableName: manager.xLockDict.get(session))
+            {
+                Table table = database.getTable(tableName);
+                table.freeXLock(session);
+            }
+            ArrayList<String> tablesLock = new ArrayList<>();
+            manager.sLockDict.replace(session, tablesLock);
+            ArrayList<String> tablexLock = new ArrayList<>();
+            manager.xLockDict.replace(session, tablexLock);
+            // sLock 在语句执行完后释放
+
+            // 某数据库记录文件超过一定大小的时候，进行log清空日志操作，并对该数据库中的每张表做持久化
+            String fileName = "DATA/" + "database_" + database.getName() + ".data";
+            File file = new File(fileName);
+            if(file.exists() && file.isFile() && file.length()>50000)
+            {
+                System.out.println("Clear database log");
+                try
+                {
+                    FileWriter writer=new FileWriter(fileName);
+                    writer.write( "");
+                    writer.close();
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+                manager.persistDatabase(database.getName());
+            }
+
+            return "Successfully commit";
+        }
+        catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
+    /**
+     * 执行自动开始事务的指令
+     * @param ctx
+     * @return 返回自动开始事务的信息或创建失败的原因
+     */
+    @Override
+    public String visitAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx){
+        try {
+            if (manager.transactionSessions.contains(session)) {
+                return "already in transaction";
+            }
+            manager.transactionSessions.add(session);
+            manager.sLockDict.put(session, new ArrayList<String>());
+            manager.xLockDict.put(session, new ArrayList<String>());
+            return "successfully auto begin transaction";
+        }
+        catch (Exception e) {
+            return e.getMessage();
+        }
+
+    }
+
+    /**
+     * 执行自动提交事务的指令
+     * @param ctx
+     * @return 返回自动提交事务的信息或创建失败的原因
+     */
+    @Override
+    public String visitAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx){
+        try {
+            if (!manager.transactionSessions.contains(session)) {
+                return "not in transaction";
+            }
+            manager.transactionSessions.remove(session);
+            // 不直接移除,要保留 key 和空的 value
+            Database database = manager.getCurrentDatabase();
+            for (String tableName: manager.xLockDict.get(session))
+            {
+                Table table = database.getTable(tableName);
+                table.freeXLock(session);
+            }
+            ArrayList<String> tablesLock = new ArrayList<>();
+            manager.sLockDict.replace(session, tablesLock);
+            ArrayList<String> tablexLock = new ArrayList<>();
+            manager.xLockDict.replace(session, tablexLock);
+            // todo: sgl为啥不对sLock做任何操作
+
+            return "Successfully auto commit";
+        }
+        catch (Exception e) {
+            return e.getMessage();
+        }
+    }
+
 
     /** 处理复合逻辑 **/
     @Override
