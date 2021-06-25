@@ -18,6 +18,9 @@ import cn.edu.thssdb.type.ConditionType;
 import javax.management.Query;
 import javax.xml.crypto.Data;
 import java.awt.image.AreaAveragingScaleFilter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Locale;
 import java.util.StringJoiner;
@@ -894,8 +897,25 @@ public class StatementVisitor extends SQLBaseVisitor{
             manager.sLockDict.replace(session, tablesLock);
             ArrayList<String> tablexLock = new ArrayList<>();
             manager.xLockDict.replace(session, tablexLock);
-            // todo: sgl为啥不对sLock做任何操作
-            // todo: 清空日志操作
+            // sLock 在语句执行完后释放
+
+            // 某数据库记录文件超过一定大小的时候，进行log清空日志操作，并对该数据库中的每张表做持久化
+            String fileName = "DATA/" + "database_" + database.getName() + ".data";
+            File file = new File(fileName);
+            if(file.exists() && file.isFile() && file.length()>50000)
+            {
+                System.out.println("Clear database log");
+                try
+                {
+                    FileWriter writer=new FileWriter(fileName);
+                    writer.write( "");
+                    writer.close();
+                } catch (IOException e)
+                {
+                    e.printStackTrace();
+                }
+                manager.persistDatabase(database.getName());
+            }
 
             return "Successfully commit";
         }

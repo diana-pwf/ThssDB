@@ -148,6 +148,13 @@ public class IServiceHandler implements IService.Iface {
 
 
   public ArrayList<QueryResult> handleCommand(String command, long sessionId, Manager manager) {
+    String cmd = command.split(" ")[0].toLowerCase();
+
+    if (sessionId == 0 && (cmd.equals("insert") || cmd.equals("update") || cmd.equals("delete") || cmd.equals("select"))) {
+      manager.writeLog(command);
+    }
+
+
     //词法分析
     SQLLexer lexer = new SQLLexer(CharStreams.fromString(command));
     lexer.removeErrorListeners();
@@ -161,7 +168,7 @@ public class IServiceHandler implements IService.Iface {
 
     //语义分析
     try {
-      StatementVisitor visitor = new StatementVisitor(manager, sessionId);   //测试默认session-999
+      StatementVisitor visitor = new StatementVisitor(manager, sessionId);
       return visitor.visitParse(parser.parse());
     } catch (Exception e) {
       ArrayList<QueryResult> queryResult = new ArrayList<QueryResult>();
@@ -170,5 +177,8 @@ public class IServiceHandler implements IService.Iface {
     }
 
   }
+
 }
+
+
 
