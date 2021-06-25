@@ -92,7 +92,6 @@ public class Database {
         }
       }
       table = null;
-      tables.remove(tableName);
 
     } catch (Exception e) {
       e.printStackTrace();
