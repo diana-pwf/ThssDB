@@ -72,7 +72,7 @@ public class Database {
 
       Table table = tables.get(tableName);
       if(!deleteDatabase){
-        tables.remove(table);
+        tables.remove(tableName);
       }
 
 
@@ -180,9 +180,9 @@ public class Database {
         ArrayList<Column> columns = new ArrayList<>();
         BufferedReader reader = new BufferedReader(new FileReader(file));
         String str = reader.readLine();
-        if(str == null){
-          throw new TableNotExistException(tableName);
-        }
+//        if(str == null){
+//          throw new TableNotExistException(tableName);
+//        }
         while (str!=null) {
           String[] colAttrs = str.split(",");
           String name = colAttrs[0];
