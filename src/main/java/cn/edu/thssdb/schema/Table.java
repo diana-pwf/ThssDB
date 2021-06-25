@@ -93,7 +93,6 @@ public class Table implements Iterable<Row> {
     }
   }
 
-
   /**
    * 功能：给定一个 String 列表，构建一个 ArrayList<Entry> 之后传给 insert(ArrayList<Entry> entry_list) 真正进行插入
    * @param values: 遍历语法树后得到的 String 列表
@@ -249,7 +248,6 @@ public class Table implements Iterable<Row> {
     return "Successfully deleted " + count.toString() + " data from the table: " + tableName;
   }
 
-  // TODO:事务处理
   public void dropSelf() throws Exception {
     try {
       lock.writeLock().lock();

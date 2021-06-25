@@ -810,9 +810,11 @@ public class StatementVisitor extends SQLBaseVisitor{
         catch (Exception e){
             return new QueryResult(e.getMessage());
         }
+        String databaseName = visitDatabase_name(ctx.database_name());
         String msg;
         try {
-            msg = database.showAllTables();
+            msg = manager.getDatabaseByName(databaseName).showAllTables();
+            //msg = database.showAllTables();
         } catch (Exception e) {
             msg = e.getMessage();
         }

@@ -128,6 +128,12 @@ public class Manager {
     return currentDatabase;
   }
 
+  public Database getDatabaseByName(String databaseName){
+    if (!databases.containsKey(databaseName)) {
+      throw new DatabaseNotExistException();
+    }
+    return databases.get(databaseName);
+  }
 
   /**
    * 将数据库名称存储到 manager.data中
