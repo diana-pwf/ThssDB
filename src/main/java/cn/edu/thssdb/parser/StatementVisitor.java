@@ -481,9 +481,65 @@ public class StatementVisitor extends SQLBaseVisitor{
         String tableName = visitTable_name(ctx.table_name());
         String msg = "";
 
-        // FIXME: naive delete without dealing with transaction and lock
-
         MultipleCondition conditions = (ctx.K_WHERE() == null ? null : visitMultiple_condition(ctx.multiple_condition()));
+
+        // 不在事务中正常执行
+        if (!manager.transactionSessions.contains(session)) {
+            try{
+                msg = "Successfully deleted " + db.delete(tableName, conditions) + " data from the table: " + tableName;
+            } catch (Exception e){
+                msg = e.getMessage();
+            }
+            return new QueryResult(msg);
+        }
+
+        Table table = db.getTable(tableName);
+
+        while (true) {
+            if (!manager.blockedSessions.contains(session)) {
+                // 尚未被阻塞，看看能不能加x锁
+
+                // 能加锁/成功，跳出循环正常执行
+                int result = table.getXLock(session);
+                if (result != -1) {
+                    if (result == 1) {
+                        // 能加锁
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    // 移出等待队列
+                    manager.blockedSessions.remove(session);
+                    break;
+                }
+                // 不能则加入等待队列
+                manager.blockedSessions.add(session);
+            }
+            else if (manager.blockedSessions.get(0).equals(session)) {
+                // 已经被阻塞，看看本次能否轮到
+
+                int result = table.getXLock(session);
+                if (result != -1)
+                {
+                    if (result == 1)
+                    {
+                        ArrayList<String> tmp = manager.xLockDict.get(session);
+                        tmp.add(tableName);
+                        manager.xLockDict.put(session,tmp);
+                    }
+                    manager.blockedSessions.remove(0);
+                    break;
+                }
+            }
+            // 因为阻塞，所以休眠一会  -- 繁忙等待
+            try {
+                Thread.sleep(300);
+            }
+            catch(Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+
         try{
             msg = "Successfully deleted " + db.delete(tableName, conditions) + " data from the table: " + tableName;
         } catch (Exception e){
