@@ -63,14 +63,15 @@ public class JointTable extends QueryTable{
                 if(!iter.hasNext()){
                     return null;
                 }
-                rowsJoin.push(iter.next());
+                rowsJoin.add(iter.next());
             }
             return new QueryRow(MetaInfoList,rowsJoin);
         }
         int idx;
         //从后往前寻找仍有后继的表
         for(idx = iterators.size()-1;idx>=0;idx--){
-            rowsJoin.pop();
+            rowsJoin.removeLast();
+
             if(!iterators.get(idx).hasNext()){
                 // 如果没有后继则恢复到最开始重新遍历
                 iterators.set(idx,tables.get(idx).iterator());
@@ -88,7 +89,7 @@ public class JointTable extends QueryTable{
             if(!iterators.get(i).hasNext()){
                 return null;
             }
-            rowsJoin.push(iterators.get(i).next());
+            rowsJoin.add(iterators.get(i).next());
         }
         return new QueryRow(MetaInfoList,rowsJoin);
     }

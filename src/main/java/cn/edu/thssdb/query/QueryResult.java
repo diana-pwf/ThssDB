@@ -164,7 +164,7 @@ public class QueryResult {
       String rowStr = resultRow.toString();
 
       // 不判distinct或满足distinct要求
-      if(!selectDistinct||rowHashSet.contains(rowStr)){
+      if(!selectDistinct||!rowHashSet.contains(rowStr)){
         result.add(resultRow);
       if(selectDistinct){
         rowHashSet.add(rowStr);
