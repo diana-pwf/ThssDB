@@ -1,6 +1,7 @@
 package cn.edu.thssdb.parser;
 
 import cn.edu.thssdb.exception.DatabaseNotExistException;
+import cn.edu.thssdb.exception.DuplicateColumnException;
 import cn.edu.thssdb.exception.DuplicatePrimaryKeyException;
 import cn.edu.thssdb.exception.NoPrimaryKeyException;
 import cn.edu.thssdb.query.*;
@@ -47,9 +48,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitSql_stmt(SQLParser.Sql_stmtContext ctx) {
         // 处理各种语句和情况
         // create db
-        if(ctx.create_db_stmt() != null) {
-            return visitCreate_db_stmt(ctx.create_db_stmt());
-        }
+        if(ctx.create_db_stmt() != null) { return visitCreate_db_stmt(ctx.create_db_stmt()); }
 
         // drop db
         if(ctx.drop_db_stmt() != null){ return visitDrop_db_stmt(ctx.drop_db_stmt());}
@@ -63,57 +62,29 @@ public class StatementVisitor extends SQLBaseVisitor{
         // drop table
         if(ctx.drop_table_stmt() != null){ return visitDrop_table_stmt(ctx.drop_table_stmt());}
 
-        // TODO: USER 好像不是必须？
-        /*
-        // create user
-        if(ctx.create_user_stmt() != null){
-
-        }
-
-        // drop user
-        if(ctx.drop_user_stmt() != null){
-
-        }
-
-         */
-
         // insert
         if(ctx.insert_stmt() != null){ return visitInsert_stmt(ctx.insert_stmt());}
 
         // delete
-        if(ctx.delete_stmt() != null){
-            return visitDelete_stmt(ctx.delete_stmt());
-        }
+        if(ctx.delete_stmt() != null){ return visitDelete_stmt(ctx.delete_stmt()); }
 
         // select
-        if(ctx.select_stmt() != null){
-            return visitSelect_stmt(ctx.select_stmt());
-        }
+        if(ctx.select_stmt() != null){ return visitSelect_stmt(ctx.select_stmt()); }
 
         // update
-        if(ctx.update_stmt() != null){
-            return visitUpdate_stmt(ctx.update_stmt());
-        }
+        if(ctx.update_stmt() != null){ return visitUpdate_stmt(ctx.update_stmt()); }
 
         //
-        if(ctx.show_db_stmt() != null){
-            return visitShow_db_stmt(ctx.show_db_stmt());
-        }
+        if(ctx.show_db_stmt() != null){ return visitShow_db_stmt(ctx.show_db_stmt()); }
 
         //
-        if(ctx.show_table_stmt() != null){
-            return visitShow_table_stmt(ctx.show_table_stmt());
-        }
+        if(ctx.show_table_stmt() != null){ return visitShow_table_stmt(ctx.show_table_stmt()); }
 
         //
-        if(ctx.show_meta_stmt() != null){
-            return visitShow_meta_stmt(ctx.show_meta_stmt());
-        }
+        if(ctx.show_meta_stmt() != null){ return visitShow_meta_stmt(ctx.show_meta_stmt()); }
 
         // quit
         if(ctx.quit_stmt() != null){ return visitQuit_stmt(ctx.quit_stmt());}
-
-
 
         return null;
     }
@@ -201,10 +172,13 @@ public class StatementVisitor extends SQLBaseVisitor{
         // 检查是否指定主键
         Boolean hasPrimary = false;
         ArrayList<Column> columnList = new ArrayList<>();
+        ArrayList<String> columnNames = new ArrayList<>();
+
         if(ctx.table_constraint() != null){
             String primaryKeyName = visitTable_constraint(ctx.table_constraint());
             for(SQLParser.Column_defContext columnDefCtx: ctx.column_def()){
                 Column column = visitColumn_def(columnDefCtx);
+                columnNames.add(column.getName());
                 if(column.getName().equals(primaryKeyName)){
                     column.setPrimary();
                     hasPrimary = true;
@@ -216,13 +190,21 @@ public class StatementVisitor extends SQLBaseVisitor{
         // 建立列
         if(hasPrimary == false){
             msg = new NoPrimaryKeyException().getMessage();
-        } else {
-            Column[] columns = columnList.toArray(new Column[0]);
-            try{
-                db.createTableIfNotExists(tableName, columns);
-            } catch (Exception e){
-                msg = e.getMessage();
+            return new QueryResult(msg);
+        }
+        // 检查是否有重复列名
+        for(String columnName : columnNames){
+            if(columnNames.indexOf(columnName) != columnNames.lastIndexOf(columnName)){
+                msg = new DuplicateColumnException("create table", columnName).getMessage();
+                return new QueryResult(msg);
             }
+        }
+        // 建立表
+        Column[] columns = columnList.toArray(new Column[0]);
+        try{
+            db.createTableIfNotExists(tableName, columns);
+        } catch (Exception e){
+            msg = e.getMessage();
         }
 
         return new QueryResult(msg);
@@ -360,13 +342,9 @@ public class StatementVisitor extends SQLBaseVisitor{
         catch (Exception e){
             return new QueryResult(e.getMessage());
         }
-        // TODO: find out difference between toString() and getText()
-        //       toString = '[' + getText() + ']' （貌似）
         String tableName = visitTable_name(ctx.table_name());
-        // Table table = db.getTable(tableName);
         String msg = "Successfully inserted data into the table: " + tableName + " in database: " + db.getName();
 
-        // FIXME: naive insert without dealing with transaction and lock
         // 处理插入值
         ArrayList<String[]> valueList = new ArrayList<>();
         for(SQLParser.Value_entryContext valueEntryContext: ctx.value_entry()){
@@ -374,7 +352,6 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // 根据是否指定插入列进行插入操作
-
         ArrayList<String> columnsName = new ArrayList<>();
         for(SQLParser.Column_nameContext columnNameContext: ctx.column_name()){
             columnsName.add(visitColumn_name(columnNameContext));
@@ -411,7 +388,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         MultipleCondition conditions = (ctx.K_WHERE() == null ? null : visitMultiple_condition(ctx.multiple_condition()));
         try{
-            msg = "Successfully deleted " + db.delete(tableName, conditions) + " data from the table: " + tableName;
+            msg = db.delete(tableName, conditions);
         } catch (Exception e){
             msg = e.getMessage();
         }
@@ -541,10 +518,8 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         String msg = "";
-        // TODO: 考虑事务
         try{
-            msg = "Successfully updated " + database.update(tableName, columnName, comparer, conditions) +
-                    " data from the table: " + tableName;
+            msg = database.update(tableName, columnName, comparer, conditions);
         }
         catch (Exception e) {
             msg = e.getMessage();

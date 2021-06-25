@@ -82,20 +82,18 @@ public class Table implements Iterable<Row> {
   /**
    * 功能：给定一个 ArrayList<Entry>，实际将数据插入表中
    * @param entryList
-   * TODO: 页式存储修改时应该只需要修改这部分。
    */
+
   public void insertEntries(ArrayList<Entry> entryList) {
     try{
-      lock.writeLock().lock();
       // put 里面自己有检测 duplicated key
       index.put(entryList.get(primaryIndex), new Row(entryList.toArray(new Entry[0])));
       entries.add(entryList.get(primaryIndex));
     }catch (Exception e){
       throw e;
-    }finally{
-      lock.writeLock().unlock();
     }
   }
+
 
   /**
    * 功能：给定一个 String 列表，构建一个 ArrayList<Entry> 之后传给 insert(ArrayList<Entry> entry_list) 真正进行插入
@@ -127,8 +125,15 @@ public class Table implements Iterable<Row> {
         throw e;
       }
     }
+    try{
+      lock.writeLock().lock();
+      insertEntries(rowEntries);
+    }catch (Exception e){
+      throw e;
+    }finally{
+      lock.writeLock().unlock();
+    }
 
-    insertEntries(rowEntries);
   }
 
   /**
@@ -166,7 +171,7 @@ public class Table implements Iterable<Row> {
         throw new ColumnNotExistException(databaseName, tableName, name);
       }
       if(index != this.columnsName.lastIndexOf(name)){
-        throw new DuplicateColumnException(name);
+        throw new DuplicateColumnException("insert", name);
       }
     }
 
@@ -193,19 +198,9 @@ public class Table implements Iterable<Row> {
         throw e;
       }
     }
-    insertEntries(rowEntries);
-  }
-
-
-  /**
-   *  功能：提供待删除记录的主 entry，将对应记录自 index 中删除
-   *  参数：entry为待删除记录的主 entry
-   */
-  public void deleteEntry(Entry entry) {
     try{
       lock.writeLock().lock();
-      index.remove(entry);
-      entries.remove(entry);
+      insertEntries(rowEntries);
     }catch (Exception e){
       throw e;
     }finally{
@@ -215,28 +210,44 @@ public class Table implements Iterable<Row> {
 
 
   /**
+   *  功能：提供待删除记录的主 entry，将对应记录自 index 中删除
+   *  参数：entry为待删除记录的主 entry
+   */
+  public void deleteEntry(Entry entry) {
+    try{
+      index.remove(entry);
+      entries.remove(entry);
+    }catch (Exception e){
+      throw e;
+    }
+  }
+
+
+  /**
    * 功能：遍历表中的 Row，针对每一行数据进行逻辑判断（是否符合删除的条件）
    * @param conditions: 删除条件
    */
 
-  // FIXME: use multipleCondition to delete,
   public String delete(MultipleCondition conditions){
     Integer count = 0;
+    MultipleCondition condition = conditions;
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
-      MultipleCondition condition = conditions;
       if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
         try{
+          lock.writeLock().lock();
           deleteEntry(row.getEntries().get(primaryIndex));
-        } catch(Exception e){
+        }catch (Exception e){
           throw e;
+        }finally{
+          lock.writeLock().unlock();
         }
         ++count;
       }
     }
-    // FIXME: change return value
-    return count.toString();
+    if(count == 0) return "Deleted no data in " + tableName + ". There might be something wrong while specifying columns or conditions.";
+    return "Successfully deleted " + count.toString() + " data from the table: " + tableName;
   }
 
   // TODO:事务处理
@@ -264,95 +275,67 @@ public class Table implements Iterable<Row> {
   }
 
   /**
-   *  FIXME:
-   *  功能：提供待修改记录的主 entry，将根据传入参数修改 row
-   *  参数：entry为待修改记录的主 entry，columns 和 entries 是要修改的对应属性和值
-   */
-  /*
-  public void update(Entry primaryEntry, ArrayList<Column> columns, ArrayList<Entry> entries) {
-    Row row = this.getRow(primaryEntry);
-    int columnsLen = columns.size();
-    int schemaIndex = 0, columnIndex = 0;
-    for(; columnIndex < columnsLen; columnIndex++){
-      while(columns.get(columnIndex).compareTo(this.columns.get(schemaIndex)) != 0){
-        ++schemaIndex;
-      }
-      row.entries.get(schemaIndex).value = entries.get(schemaIndex).value;
-    }
-    try {
-      lock.writeLock().lock();
-      index.update(row.getEntries().get(primaryIndex), row);
-      entries.set(primaryIndex, row.getEntries().get(primaryIndex));
-    }catch(Exception e){
-      throw e;
-    }finally{
-      lock.writeLock().unlock();
-    }
-  }
-
-   */
-
-
-  /**
    *  参数：columnName为要更新的那一列的属性名称，comparer为待更新的值， conditions为where后所接的条件表达式
    *  功能：将满足条件表达式的行的相应属性更新为相应的值
    *  返回值：向客户端说明执行情况
    */
   public String update(String columnName, Comparer comparer, MultipleCondition conditions) {
     Integer count = 0;
+
     // 取得修改的位置
     int index = this.columnsName.indexOf(columnName);
     // 没有找到对应列
     if(index < 0){
       throw new ColumnNotExistException(databaseName, tableName, columnName);
     }
+    // 设置修改列
+    Column column = this.columns.get(index);
+
+    // 检查 type
+    ValueParser vp = new ValueParser();
+    Comparable newValue;
+    try {
+      newValue = vp.compararToComparable(column, comparer);
+      vp.checkValid(column, newValue);
+    } catch (Exception e){
+      throw e;
+    }
+
+    // 记录逻辑判断条件
     MultipleCondition condition = new MultipleCondition(conditions);
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
       if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
-        // 取得主键
+        // 取得旧主键
         Entry entry = queryRow.getEntries().get(primaryIndex);
 
         // 取得旧行并构建新行
         Row oldRow = getRow(entry);
-        Column column = this.columns.get(index);
-        ValueParser vp = new ValueParser();
-
-        Comparable newValue;
         Comparable oldValue = oldRow.getEntries().get(index).value;
-        try {
-          newValue = vp.compararToComparable(column, comparer);
-          vp.checkValid(column, newValue);
-        } catch (Exception e){
-          throw e;
-        }
-        Row newRow = new Row(oldRow.getEntries().toArray(new Entry[0]));
+        Row newRow = new Row(oldRow);
         newRow.getEntries().get(index).value = newValue;
 
         // 分为是否更新主键有不同操作
-        if(column.isPrimary() && oldValue != newValue){
-          try{
-            // 先插入，检查是否有冲突
+
+        try {
+          lock.writeLock().lock();
+          if(column.isPrimary() && oldValue != newValue) {
             insertEntries(newRow.getEntries());
-            // 没有冲突才更新 entries
-            entries.remove(entry);
-            entries.add(newRow.getEntries().get(primaryIndex));
-          } catch (Exception e){
-            throw e;
-          }
-        }else {
-          try {
+            deleteEntry(entry);
+          }else {
             this.index.update(entry, newRow);
-          } catch (Exception e) {
-            throw e;
           }
+        } catch (Exception e){
+          throw e;
+        } finally {
+          lock.writeLock().unlock();
         }
         ++count;
       }
     }
-
-    return count.toString();
+    if(count == 0) return "No data in " + tableName + " matched conditions. Updated no data in " + tableName + ".";
+    return "Successfully updated " + count.toString() + " data from the table: " + tableName;
   }
 
 
@@ -388,8 +371,8 @@ public class Table implements Iterable<Row> {
               new File(fileName)));
       oo.writeObject(rows);
       System.out.println("successfully serialize file!");
-      oo.close();}
-    catch(Exception e){
+      oo.close();
+    } catch(Exception e){
       System.out.println("error occurs when serializing file");
     }
   }
@@ -400,6 +383,7 @@ public class Table implements Iterable<Row> {
       ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
       rows = (ArrayList<Row>) ois.readObject();
       System.out.println("successfully deserialize file! ");
+      ois.close();
     } catch (Exception e) {
       rows = null;
       System.out.println("error occurs when deserializing file");
@@ -408,7 +392,7 @@ public class Table implements Iterable<Row> {
   }
 
   public String showMeta() {
-    String schema = "columnName, columnType, primaryKeyIndex, isNull, maxLength";
+    String schema = "columnName, columnType, primaryKey, isNull, maxLength";
     StringBuilder result = new StringBuilder("tableName: " + tableName + "\n" + schema + "\n");
     for(Column column : columns) {
       if(column != null) {

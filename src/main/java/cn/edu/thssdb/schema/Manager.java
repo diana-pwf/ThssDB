@@ -1,5 +1,6 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.DatabaseAlreadyExistException;
 import cn.edu.thssdb.exception.DatabaseNotExistException;
 import cn.edu.thssdb.server.ThssDB;
 // import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
@@ -41,6 +42,7 @@ public class Manager {
       }
       else{
         database = databases.get(databaseName);
+        throw new DatabaseAlreadyExistException(databaseName);
       }
       currentDatabase = database;
     } catch (Exception e) {

@@ -1,5 +1,6 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.TableAlreadyExistException;
 import cn.edu.thssdb.exception.TableNotExistException;
 import cn.edu.thssdb.query.Comparer;
 import cn.edu.thssdb.query.QueryResult;
@@ -40,6 +41,8 @@ public class Database {
         Table table = new Table(name, tableName, tableColumns);
         tables.put(tableName, table);
         persist();
+      }else{
+        throw new TableAlreadyExistException(tableName);
       }
     } catch (Exception e) {
       e.printStackTrace();
@@ -211,7 +214,6 @@ public class Database {
       for (Table table: tables.values()) {
         dropTable(table.tableName);
       }
-
 
       // tables.clear();
       tables = null;
