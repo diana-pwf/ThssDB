@@ -12,7 +12,7 @@ public class SingleTable extends QueryTable{
     private Table table;
     private Iterator<Row> iterators;
 
-    SingleTable(Table table){
+    public SingleTable(Table table){
         this.table = table;
         this.iterators = table.iterator();
         createMetaInfo();

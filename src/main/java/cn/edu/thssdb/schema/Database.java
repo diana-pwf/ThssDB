@@ -100,10 +100,19 @@ public class Database {
 
   }
 
-  public String select(QueryTable queryTable) {
-    // TODO
-    QueryResult queryResult = new QueryResult(queryTable,null,false);
-    return null;
+  public QueryResult select(String[] columnNames, QueryTable queryTable, MultipleCondition conditions, Boolean distinct) {
+    try {
+      lock.readLock().lock();
+      queryTable.setSelectCondition(conditions);
+      QueryResult queryResult = new QueryResult(queryTable, columnNames, distinct);
+      queryResult.generateQueryRecord();
+      return queryResult;
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+
+
   }
 
   public void insert(String tableName, ArrayList<String> columnsName, String[] values){

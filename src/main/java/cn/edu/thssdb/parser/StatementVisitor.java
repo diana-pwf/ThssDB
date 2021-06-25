@@ -454,58 +454,54 @@ public class StatementVisitor extends SQLBaseVisitor{
     @Override
     public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx){
 
-        Database database = null;
-        try{
-            database = getCurrentDB();
-        }
-        catch (Exception e){
-            return new QueryResult(e.getMessage());
-        }
+        Database database = manager.getCurrentDatabase();
         if(database == null) {
             throw new DatabaseNotExistException();
         }
 
+        // distict 处理
         boolean distinct = (ctx.K_DISTINCT() != null);
 
+        // condition 处理
         MultipleCondition conditions = null;
         if (ctx.K_WHERE() != null) {
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
-        ArrayList<String> columnNames = new ArrayList<String>();
+        // column 处理
+
         int columnNum = ctx.result_column().size();
+        String[] columnNames = new String[columnNum];
         for (int i = 0; i < columnNum; i++) {
             String columnName = visitResult_column(ctx.result_column(i));
             if (columnName.equals("*")) {
-                columnNames.clear();
+                columnNames = null;
                 break;
             }
-            columnNames.add(columnName);
+            columnNames[i] = columnName;
         }
 
-        // TODO: 读取QueryTable变量
+        // table 处理
+        // todo: 看看有无别的写法
+//        int tableNum = ctx.table_query().size();
+//        if (tableNum == 0) {
+//            throw new NotSelectTableException();
+//        }
+//        for (int i = 0; i < tableNum; i++) {
+//
+//        }
+        QueryTable queryTable = visitTable_query_stmt(ctx.table_query(0));
 
-        QueryTable queryTable = null;
+        // 若session不在事务中，直接执行
 
-        int tableNum = ctx.table_query().size();
-        if (tableNum == 0) {
-            // TODO: 抛异常
-        }
-        for (int i = 0; i < tableNum; i++) {
-
-        }
-
-        // TODO: 考虑事务
         try {
             // TODO
-            // database.select(columnNames, queryTable, conditions, distinct);
-            return new QueryResult("");
+            return database.select(columnNames, queryTable, conditions, distinct);
         } catch (Exception e) {
             return new QueryResult(e.toString());
-
         }
 
-        // return null;
+
     }
 
     @Override
@@ -698,11 +694,21 @@ public class StatementVisitor extends SQLBaseVisitor{
         return current_base;
     }
 
-    public QueryTable visitQueryTable() {
-        // TODO: 单一表
-
-        // TODO: 处理复合逻辑
-
-        return null;
+    // @Override
+    public QueryTable visitTable_query_stmt (SQLParser.Table_queryContext ctx) {
+        // todo: 看看这个有无别的写法  考虑：如果table不存在呢？
+        Database database = manager.getCurrentDatabase();
+    // 处理单一逻辑
+        if (ctx.K_JOIN().size() == 0) {
+            Table table = database.getTable(ctx.table_name(0).getText());
+            return new SingleTable(table);
+        }
+    // 处理复合逻辑
+        MultipleCondition multipleCondition = visitMultiple_condition(ctx.multiple_condition());
+        ArrayList<Table> tables = new ArrayList<Table>();
+        for (SQLParser.Table_nameContext subctx : ctx.table_name()) {
+            tables.add(database.getTable(subctx.getText().toLowerCase()));
+        }
+        return new JointTable(tables, multipleCondition);
     }
 }
