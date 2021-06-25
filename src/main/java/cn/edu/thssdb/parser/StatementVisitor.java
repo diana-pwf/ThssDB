@@ -569,9 +569,12 @@ public class StatementVisitor extends SQLBaseVisitor{
     @Override
     public QueryResult visitSelect_stmt(SQLParser.Select_stmtContext ctx) {
 
-        Database database = manager.getCurrentDatabase();
-        if(database == null) {
-            throw new DatabaseNotExistException();
+        Database database = null;
+        try{
+            database = getCurrentDB();
+        }
+        catch (Exception e){
+            return new QueryResult(e.getMessage());
         }
 
         // distict 处理
@@ -604,7 +607,13 @@ public class StatementVisitor extends SQLBaseVisitor{
 //        for (int i = 0; i < tableNum; i++) {
 //
 //        }
-        QueryTable queryTable = visitTable_query_stmt(ctx.table_query(0));
+        QueryTable queryTable = null;
+        try{
+            queryTable = visitTable_query_stmt(ctx.table_query(0));
+        }catch (Exception e){
+            return new QueryResult(e.toString());
+        }
+
 
         // 若session不在事务中，直接执行
         if (!manager.transactionSessions.contains(session)) {
@@ -971,10 +980,10 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         // 复合逻辑
         ConditionType type = null;
-        if (ctx.AND() != null) {
+        if (ctx.K_AND() != null) {
             type = ConditionType.AND;
         }
-        else if (ctx.OR() != null) {
+        else if (ctx.K_OR() != null) {
             type = ConditionType.OR;
         }
         return new MultipleCondition(visitMultiple_condition(ctx.multiple_condition(0)),
@@ -1051,12 +1060,21 @@ public class StatementVisitor extends SQLBaseVisitor{
 
 
 
+    private Database getCurrentDB() {
+
+        Database current_base = manager.getCurrentDatabase();
+        if(current_base == null) {
+            throw new DatabaseNotExistException();
+        }
+        return current_base;
+    }
 
     // @Override
     public QueryTable visitTable_query_stmt (SQLParser.Table_queryContext ctx) {
         // todo: 看看这个有无别的写法  考虑：如果table不存在呢？
-        Database database = manager.getCurrentDatabase();
-    // 处理单一逻辑
+        Database database = null;
+        database = getCurrentDB();
+        // 处理单一逻辑
         if (ctx.K_JOIN().size() == 0) {
             Table table = database.getTable(ctx.table_name(0).getText());
             return new SingleTable(table);

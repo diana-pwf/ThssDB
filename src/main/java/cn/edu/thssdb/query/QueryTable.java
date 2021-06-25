@@ -23,6 +23,7 @@ public abstract class QueryTable implements Iterator<Row> {
   public abstract void createMetaInfo();
   QueryTable() {
     queue = new LinkedList<QueryRow>();
+    MetaInfoList = new ArrayList<>();
     init = true;
   }
   public void setSelectCondition(MultipleCondition Condition){
@@ -31,7 +32,7 @@ public abstract class QueryTable implements Iterator<Row> {
 
   @Override
   public boolean hasNext() {
-     return init || queue.isEmpty();
+     return init || !queue.isEmpty();
   }
 
   @Override

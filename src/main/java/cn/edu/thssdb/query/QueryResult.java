@@ -36,6 +36,7 @@ public class QueryResult {
    * @param distinct 是否需要判 Distinct
    */
   public QueryResult(QueryTable queryTable,String[] selectColumn,boolean distinct) {
+    table = queryTable;
     isQueryResult = true;
     columnSelectIdx = new ArrayList<Integer>();
     columnSelectName = new ArrayList<String>();
@@ -95,7 +96,7 @@ public class QueryResult {
   public Integer getColumnIndex(String column){
     // table.column
     if(column.contains(".")){
-      String[] seq = column.split(".");
+      String[] seq = column.split("\\.");
       if(seq.length!=2){
         throw new IllegalSQLStatement(column);
       }
@@ -134,6 +135,7 @@ public class QueryResult {
         }
         if(!columnExist)
         {
+          indexFind = seqIndex + idx;
            columnExist = true;
         }
         else{

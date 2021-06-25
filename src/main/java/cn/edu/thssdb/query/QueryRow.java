@@ -63,7 +63,8 @@ public class QueryRow extends Row {
 
         // table.column
         if(column.contains(".")){
-            String[] seq = column.split(".");
+            String[] seq = column.split("\\.");
+
             if(seq.length!=2){
                 throw new IllegalSQLStatement(column);
             }
