@@ -206,7 +206,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx){
         Database db = null;
         try{
-            db = getCurrentDB();
+            db = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -338,7 +338,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitDrop_table_stmt(SQLParser.Drop_table_stmtContext ctx){
         Database db = null;
         try{
-            db = getCurrentDB();
+            db = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -372,7 +372,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitInsert_stmt(SQLParser.Insert_stmtContext ctx){
         Database db = null;
         try{
-            db = getCurrentDB();
+            db = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -473,7 +473,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitDelete_stmt(SQLParser.Delete_stmtContext ctx){
         Database db = null;
         try{
-            db = getCurrentDB();
+            db = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -543,7 +543,6 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // column 处理
-        ArrayList<String> columnNames = new ArrayList<String>();
         int columnNum = ctx.result_column().size();
         String[] columnNames = new String[columnNum];
         for (int i = 0; i < columnNum; i++) {
@@ -564,7 +563,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 //        for (int i = 0; i < tableNum; i++) {
 //
 //        }
-        QueryTable queryTable = visitQueryTable(ctx.table_query(0));
+        QueryTable queryTable = visitTable_query_stmt(ctx.table_query(0));
 
         // 若session不在事务中，直接执行
         if (!manager.transactionSessions.contains(session)) {
@@ -656,7 +655,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitUpdate_stmt(SQLParser.Update_stmtContext ctx){
         Database database = null;
         try{
-            database = getCurrentDB();
+            database = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -757,7 +756,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
         Database database = null;
         try{
-            database = getCurrentDB();
+            database = manager.getCurrentDatabase();
         }
         catch (Exception e){
             return new QueryResult(e.getMessage());
@@ -778,7 +777,7 @@ public class StatementVisitor extends SQLBaseVisitor{
             String msg;
             Database database = null;
             try{
-                database = getCurrentDB();
+                database = manager.getCurrentDatabase();
             }
             catch (Exception e){
                 return new QueryResult(e.getMessage());
