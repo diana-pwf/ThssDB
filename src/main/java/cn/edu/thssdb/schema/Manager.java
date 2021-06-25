@@ -223,7 +223,12 @@ public class Manager {
 
   public void writeLog(String statement) {
     // 找到对应的数据库并将操作语句写入文件
+
     Database db = getCurrentDatabase();
+    if(db == null){
+      return;
+    }
+
     File file = new File("DATA/" + db.getName() + ".log");
 
     try {

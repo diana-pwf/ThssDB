@@ -180,6 +180,9 @@ public class Database {
         ArrayList<Column> columns = new ArrayList<>();
         BufferedReader reader = new BufferedReader(new FileReader(file));
         String str = reader.readLine();
+        if(str == null){
+          throw new TableNotExistException(tableName);
+        }
         while (str!=null) {
           String[] colAttrs = str.split(",");
           String name = colAttrs[0];
