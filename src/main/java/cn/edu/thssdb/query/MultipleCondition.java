@@ -37,6 +37,13 @@ public class MultipleCondition {
         mSingle = true;
     }
 
+    public MultipleCondition(MultipleCondition conditions) {
+        mLeft = conditions.mLeft;
+        mRight = conditions.mRight;
+        mType = conditions.mType;
+        mSingle = conditions.mSingle;
+    }
+
     public ResultType JudgeMultipleCondition(QueryRow row){
         // Todo:需要保证multipleCondition != null
         // only one condition

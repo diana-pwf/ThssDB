@@ -218,11 +218,12 @@ public class Table implements Iterable<Row> {
    */
 
   // FIXME: use multipleCondition to delete,
-  public String delete(MultipleCondition condition){
+  public String delete(MultipleCondition conditions){
     Integer count = 0;
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
+      MultipleCondition condition = conditions;
       if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
         try{
           deleteEntry(row.getEntries().get(primaryIndex));
@@ -306,7 +307,8 @@ public class Table implements Iterable<Row> {
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
-      if(conditions == null || conditions.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
+      MultipleCondition condition = new MultipleCondition(conditions);
+      if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
         // 取得主键
         Entry entry = queryRow.getEntries().get(primaryIndex);
 
