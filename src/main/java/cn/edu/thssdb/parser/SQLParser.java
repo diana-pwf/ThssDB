@@ -1,4 +1,4 @@
-// Generated from C:/Users/86181/Desktop/course/大三下/数据库/选题一框架/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.9.1
+// Generated from C:/ava/3-Spring/DBMS/project/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.9.1
 package cn.edu.thssdb.parser;
 import org.antlr.v4.runtime.atn.*;
 import org.antlr.v4.runtime.dfa.DFA;
@@ -18,9 +18,9 @@ public class SQLParser extends Parser {
 		new PredictionContextCache();
 	public static final int
 		T__0=1, T__1=2, T__2=3, T__3=4, T__4=5, EQ=6, NE=7, LT=8, GT=9, LE=10, 
-		GE=11, ADD=12, SUB=13, MUL=14, DIV=15, AND=16, OR=17, T_INT=18, T_LONG=19, 
-		T_FLOAT=20, T_DOUBLE=21, T_STRING=22, K_ADD=23, K_ALL=24, K_AS=25, K_BY=26, 
-		K_COLUMN=27, K_CREATE=28, K_DATABASE=29, K_DATABASES=30, K_DELETE=31, 
+		GE=11, ADD=12, SUB=13, MUL=14, DIV=15, T_INT=16, T_LONG=17, T_FLOAT=18, 
+		T_DOUBLE=19, T_STRING=20, K_AND=21, K_OR=22, K_ADD=23, K_ALL=24, K_AS=25, 
+		K_BY=26, K_COLUMN=27, K_CREATE=28, K_DATABASE=29, K_DATABASES=30, K_DELETE=31, 
 		K_DISTINCT=32, K_DROP=33, K_EXISTS=34, K_FROM=35, K_GRANT=36, K_IF=37, 
 		K_IDENTIFIED=38, K_INSERT=39, K_INTO=40, K_JOIN=41, K_KEY=42, K_NOT=43, 
 		K_NULL=44, K_ON=45, K_PRIMARY=46, K_QUIT=47, K_REVOKE=48, K_SELECT=49, 
@@ -70,8 +70,8 @@ public class SQLParser extends Parser {
 	private static String[] makeSymbolicNames() {
 		return new String[] {
 			null, null, null, null, null, null, "EQ", "NE", "LT", "GT", "LE", "GE", 
-			"ADD", "SUB", "MUL", "DIV", "AND", "OR", "T_INT", "T_LONG", "T_FLOAT", 
-			"T_DOUBLE", "T_STRING", "K_ADD", "K_ALL", "K_AS", "K_BY", "K_COLUMN", 
+			"ADD", "SUB", "MUL", "DIV", "T_INT", "T_LONG", "T_FLOAT", "T_DOUBLE", 
+			"T_STRING", "K_AND", "K_OR", "K_ADD", "K_ALL", "K_AS", "K_BY", "K_COLUMN", 
 			"K_CREATE", "K_DATABASE", "K_DATABASES", "K_DELETE", "K_DISTINCT", "K_DROP", 
 			"K_EXISTS", "K_FROM", "K_GRANT", "K_IF", "K_IDENTIFIED", "K_INSERT", 
 			"K_INTO", "K_JOIN", "K_KEY", "K_NOT", "K_NULL", "K_ON", "K_PRIMARY", 
@@ -2352,8 +2352,8 @@ public class SQLParser extends Parser {
 		public Multiple_conditionContext multiple_condition(int i) {
 			return getRuleContext(Multiple_conditionContext.class,i);
 		}
-		public TerminalNode AND() { return getToken(SQLParser.AND, 0); }
-		public TerminalNode OR() { return getToken(SQLParser.OR, 0); }
+		public TerminalNode K_AND() { return getToken(SQLParser.K_AND, 0); }
+		public TerminalNode K_OR() { return getToken(SQLParser.K_OR, 0); }
 		public Multiple_conditionContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -2411,7 +2411,7 @@ public class SQLParser extends Parser {
 						setState(373);
 						if (!(precpred(_ctx, 2))) throw new FailedPredicateException(this, "precpred(_ctx, 2)");
 						setState(374);
-						match(AND);
+						match(K_AND);
 						setState(375);
 						multiple_condition(3);
 						}
@@ -2423,7 +2423,7 @@ public class SQLParser extends Parser {
 						setState(376);
 						if (!(precpred(_ctx, 1))) throw new FailedPredicateException(this, "precpred(_ctx, 1)");
 						setState(377);
-						match(OR);
+						match(K_OR);
 						setState(378);
 						multiple_condition(2);
 						}
@@ -3576,15 +3576,15 @@ public class SQLParser extends Parser {
 		"\65\3\2\2\2\u015a\u015b\7@\2\2\u015b\67\3\2\2\2\u015c\u015d\5Z.\2\u015d"+
 		"\u0161\5:\36\2\u015e\u0160\5<\37\2\u015f\u015e\3\2\2\2\u0160\u0163\3\2"+
 		"\2\2\u0161\u015f\3\2\2\2\u0161\u0162\3\2\2\2\u01629\3\2\2\2\u0163\u0161"+
-		"\3\2\2\2\u0164\u016d\7\24\2\2\u0165\u016d\7\25\2\2\u0166\u016d\7\26\2"+
-		"\2\u0167\u016d\7\27\2\2\u0168\u0169\7\30\2\2\u0169\u016a\7\4\2\2\u016a"+
+		"\3\2\2\2\u0164\u016d\7\22\2\2\u0165\u016d\7\23\2\2\u0166\u016d\7\24\2"+
+		"\2\u0167\u016d\7\25\2\2\u0168\u0169\7\26\2\2\u0169\u016a\7\4\2\2\u016a"+
 		"\u016b\7C\2\2\u016b\u016d\7\6\2\2\u016c\u0164\3\2\2\2\u016c\u0165\3\2"+
 		"\2\2\u016c\u0166\3\2\2\2\u016c\u0167\3\2\2\2\u016c\u0168\3\2\2\2\u016d"+
 		";\3\2\2\2\u016e\u016f\7\60\2\2\u016f\u0173\7,\2\2\u0170\u0171\7-\2\2\u0171"+
 		"\u0173\7.\2\2\u0172\u016e\3\2\2\2\u0172\u0170\3\2\2\2\u0173=\3\2\2\2\u0174"+
 		"\u0175\b \1\2\u0175\u0176\5@!\2\u0176\u017f\3\2\2\2\u0177\u0178\f\4\2"+
-		"\2\u0178\u0179\7\22\2\2\u0179\u017e\5> \5\u017a\u017b\f\3\2\2\u017b\u017c"+
-		"\7\23\2\2\u017c\u017e\5> \4\u017d\u0177\3\2\2\2\u017d\u017a\3\2\2\2\u017e"+
+		"\2\u0178\u0179\7\27\2\2\u0179\u017e\5> \5\u017a\u017b\f\3\2\2\u017b\u017c"+
+		"\7\30\2\2\u017c\u017e\5> \4\u017d\u0177\3\2\2\2\u017d\u017a\3\2\2\2\u017e"+
 		"\u0181\3\2\2\2\u017f\u017d\3\2\2\2\u017f\u0180\3\2\2\2\u0180?\3\2\2\2"+
 		"\u0181\u017f\3\2\2\2\u0182\u0183\5F$\2\u0183\u0184\5D#\2\u0184\u0185\5"+
 		"F$\2\u0185A\3\2\2\2\u0186\u0189\5R*\2\u0187\u0189\5P)\2\u0188\u0186\3"+

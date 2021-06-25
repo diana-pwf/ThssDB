@@ -1,4 +1,4 @@
-// Generated from C:/Users/86181/Desktop/course/大三下/数据库/选题一框架/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.9.1
+// Generated from C:/ava/3-Spring/DBMS/project/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.9.1
 package cn.edu.thssdb.parser;
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;
@@ -18,9 +18,9 @@ public class SQLLexer extends Lexer {
 		new PredictionContextCache();
 	public static final int
 		T__0=1, T__1=2, T__2=3, T__3=4, T__4=5, EQ=6, NE=7, LT=8, GT=9, LE=10, 
-		GE=11, ADD=12, SUB=13, MUL=14, DIV=15, AND=16, OR=17, T_INT=18, T_LONG=19, 
-		T_FLOAT=20, T_DOUBLE=21, T_STRING=22, K_ADD=23, K_ALL=24, K_AS=25, K_BY=26, 
-		K_COLUMN=27, K_CREATE=28, K_DATABASE=29, K_DATABASES=30, K_DELETE=31, 
+		GE=11, ADD=12, SUB=13, MUL=14, DIV=15, T_INT=16, T_LONG=17, T_FLOAT=18, 
+		T_DOUBLE=19, T_STRING=20, K_AND=21, K_OR=22, K_ADD=23, K_ALL=24, K_AS=25, 
+		K_BY=26, K_COLUMN=27, K_CREATE=28, K_DATABASE=29, K_DATABASES=30, K_DELETE=31, 
 		K_DISTINCT=32, K_DROP=33, K_EXISTS=34, K_FROM=35, K_GRANT=36, K_IF=37, 
 		K_IDENTIFIED=38, K_INSERT=39, K_INTO=40, K_JOIN=41, K_KEY=42, K_NOT=43, 
 		K_NULL=44, K_ON=45, K_PRIMARY=46, K_QUIT=47, K_REVOKE=48, K_SELECT=49, 
@@ -39,8 +39,8 @@ public class SQLLexer extends Lexer {
 	private static String[] makeRuleNames() {
 		return new String[] {
 			"T__0", "T__1", "T__2", "T__3", "T__4", "EQ", "NE", "LT", "GT", "LE", 
-			"GE", "ADD", "SUB", "MUL", "DIV", "AND", "OR", "T_INT", "T_LONG", "T_FLOAT", 
-			"T_DOUBLE", "T_STRING", "K_ADD", "K_ALL", "K_AS", "K_BY", "K_COLUMN", 
+			"GE", "ADD", "SUB", "MUL", "DIV", "T_INT", "T_LONG", "T_FLOAT", "T_DOUBLE", 
+			"T_STRING", "K_AND", "K_OR", "K_ADD", "K_ALL", "K_AS", "K_BY", "K_COLUMN", 
 			"K_CREATE", "K_DATABASE", "K_DATABASES", "K_DELETE", "K_DISTINCT", "K_DROP", 
 			"K_EXISTS", "K_FROM", "K_GRANT", "K_IF", "K_IDENTIFIED", "K_INSERT", 
 			"K_INTO", "K_JOIN", "K_KEY", "K_NOT", "K_NULL", "K_ON", "K_PRIMARY", 
@@ -65,8 +65,8 @@ public class SQLLexer extends Lexer {
 	private static String[] makeSymbolicNames() {
 		return new String[] {
 			null, null, null, null, null, null, "EQ", "NE", "LT", "GT", "LE", "GE", 
-			"ADD", "SUB", "MUL", "DIV", "AND", "OR", "T_INT", "T_LONG", "T_FLOAT", 
-			"T_DOUBLE", "T_STRING", "K_ADD", "K_ALL", "K_AS", "K_BY", "K_COLUMN", 
+			"ADD", "SUB", "MUL", "DIV", "T_INT", "T_LONG", "T_FLOAT", "T_DOUBLE", 
+			"T_STRING", "K_AND", "K_OR", "K_ADD", "K_ALL", "K_AS", "K_BY", "K_COLUMN", 
 			"K_CREATE", "K_DATABASE", "K_DATABASES", "K_DELETE", "K_DISTINCT", "K_DROP", 
 			"K_EXISTS", "K_FROM", "K_GRANT", "K_IF", "K_IDENTIFIED", "K_INSERT", 
 			"K_INTO", "K_JOIN", "K_KEY", "K_NOT", "K_NULL", "K_ON", "K_PRIMARY", 
@@ -149,9 +149,9 @@ public class SQLLexer extends Lexer {
 		"\4U\tU\4V\tV\4W\tW\4X\tX\4Y\tY\4Z\tZ\4[\t[\4\\\t\\\4]\t]\4^\t^\4_\t_\4"+
 		"`\t`\4a\ta\4b\tb\3\2\3\2\3\3\3\3\3\4\3\4\3\5\3\5\3\6\3\6\3\7\3\7\3\b\3"+
 		"\b\3\b\3\t\3\t\3\n\3\n\3\13\3\13\3\13\3\f\3\f\3\f\3\r\3\r\3\16\3\16\3"+
-		"\17\3\17\3\20\3\20\3\21\3\21\3\21\3\21\3\22\3\22\3\22\3\23\3\23\3\23\3"+
-		"\23\3\24\3\24\3\24\3\24\3\24\3\25\3\25\3\25\3\25\3\25\3\25\3\26\3\26\3"+
-		"\26\3\26\3\26\3\26\3\26\3\27\3\27\3\27\3\27\3\27\3\27\3\27\3\30\3\30\3"+
+		"\17\3\17\3\20\3\20\3\21\3\21\3\21\3\21\3\22\3\22\3\22\3\22\3\22\3\23\3"+
+		"\23\3\23\3\23\3\23\3\23\3\24\3\24\3\24\3\24\3\24\3\24\3\24\3\25\3\25\3"+
+		"\25\3\25\3\25\3\25\3\25\3\26\3\26\3\26\3\26\3\27\3\27\3\27\3\30\3\30\3"+
 		"\30\3\30\3\31\3\31\3\31\3\31\3\32\3\32\3\32\3\33\3\33\3\33\3\34\3\34\3"+
 		"\34\3\34\3\34\3\34\3\34\3\35\3\35\3\35\3\35\3\35\3\35\3\35\3\36\3\36\3"+
 		"\36\3\36\3\36\3\36\3\36\3\36\3\36\3\37\3\37\3\37\3\37\3\37\3\37\3\37\3"+
@@ -201,8 +201,8 @@ public class SQLLexer extends Lexer {
 		"\3\2\2\2\13\u00cd\3\2\2\2\r\u00cf\3\2\2\2\17\u00d1\3\2\2\2\21\u00d4\3"+
 		"\2\2\2\23\u00d6\3\2\2\2\25\u00d8\3\2\2\2\27\u00db\3\2\2\2\31\u00de\3\2"+
 		"\2\2\33\u00e0\3\2\2\2\35\u00e2\3\2\2\2\37\u00e4\3\2\2\2!\u00e6\3\2\2\2"+
-		"#\u00ea\3\2\2\2%\u00ed\3\2\2\2\'\u00f1\3\2\2\2)\u00f6\3\2\2\2+\u00fc\3"+
-		"\2\2\2-\u0103\3\2\2\2/\u010a\3\2\2\2\61\u010e\3\2\2\2\63\u0112\3\2\2\2"+
+		"#\u00ea\3\2\2\2%\u00ef\3\2\2\2\'\u00f5\3\2\2\2)\u00fc\3\2\2\2+\u0103\3"+
+		"\2\2\2-\u0107\3\2\2\2/\u010a\3\2\2\2\61\u010e\3\2\2\2\63\u0112\3\2\2\2"+
 		"\65\u0115\3\2\2\2\67\u0118\3\2\2\29\u011f\3\2\2\2;\u0126\3\2\2\2=\u012f"+
 		"\3\2\2\2?\u0139\3\2\2\2A\u0140\3\2\2\2C\u0149\3\2\2\2E\u014e\3\2\2\2G"+
 		"\u0155\3\2\2\2I\u015a\3\2\2\2K\u0160\3\2\2\2M\u0163\3\2\2\2O\u016e\3\2"+
@@ -229,18 +229,18 @@ public class SQLLexer extends Lexer {
 		"\u00da\7?\2\2\u00da\26\3\2\2\2\u00db\u00dc\7@\2\2\u00dc\u00dd\7?\2\2\u00dd"+
 		"\30\3\2\2\2\u00de\u00df\7-\2\2\u00df\32\3\2\2\2\u00e0\u00e1\7/\2\2\u00e1"+
 		"\34\3\2\2\2\u00e2\u00e3\7,\2\2\u00e3\36\3\2\2\2\u00e4\u00e5\7\61\2\2\u00e5"+
-		" \3\2\2\2\u00e6\u00e7\5\u0091I\2\u00e7\u00e8\5\u00abV\2\u00e8\u00e9\5"+
-		"\u0097L\2\u00e9\"\3\2\2\2\u00ea\u00eb\5\u00adW\2\u00eb\u00ec\5\u00b3Z"+
-		"\2\u00ec$\3\2\2\2\u00ed\u00ee\5\u00a1Q\2\u00ee\u00ef\5\u00abV\2\u00ef"+
-		"\u00f0\5\u00b7\\\2\u00f0&\3\2\2\2\u00f1\u00f2\5\u00a7T\2\u00f2\u00f3\5"+
-		"\u00adW\2\u00f3\u00f4\5\u00abV\2\u00f4\u00f5\5\u009dO\2\u00f5(\3\2\2\2"+
-		"\u00f6\u00f7\5\u009bN\2\u00f7\u00f8\5\u00a7T\2\u00f8\u00f9\5\u00adW\2"+
-		"\u00f9\u00fa\5\u0091I\2\u00fa\u00fb\5\u00b7\\\2\u00fb*\3\2\2\2\u00fc\u00fd"+
-		"\5\u0097L\2\u00fd\u00fe\5\u00adW\2\u00fe\u00ff\5\u00b9]\2\u00ff\u0100"+
-		"\5\u0093J\2\u0100\u0101\5\u00a7T\2\u0101\u0102\5\u0099M\2\u0102,\3\2\2"+
-		"\2\u0103\u0104\5\u00b5[\2\u0104\u0105\5\u00b7\\\2\u0105\u0106\5\u00b3"+
-		"Z\2\u0106\u0107\5\u00a1Q\2\u0107\u0108\5\u00abV\2\u0108\u0109\5\u009d"+
-		"O\2\u0109.\3\2\2\2\u010a\u010b\5\u0091I\2\u010b\u010c\5\u0097L\2\u010c"+
+		" \3\2\2\2\u00e6\u00e7\5\u00a1Q\2\u00e7\u00e8\5\u00abV\2\u00e8\u00e9\5"+
+		"\u00b7\\\2\u00e9\"\3\2\2\2\u00ea\u00eb\5\u00a7T\2\u00eb\u00ec\5\u00ad"+
+		"W\2\u00ec\u00ed\5\u00abV\2\u00ed\u00ee\5\u009dO\2\u00ee$\3\2\2\2\u00ef"+
+		"\u00f0\5\u009bN\2\u00f0\u00f1\5\u00a7T\2\u00f1\u00f2\5\u00adW\2\u00f2"+
+		"\u00f3\5\u0091I\2\u00f3\u00f4\5\u00b7\\\2\u00f4&\3\2\2\2\u00f5\u00f6\5"+
+		"\u0097L\2\u00f6\u00f7\5\u00adW\2\u00f7\u00f8\5\u00b9]\2\u00f8\u00f9\5"+
+		"\u0093J\2\u00f9\u00fa\5\u00a7T\2\u00fa\u00fb\5\u0099M\2\u00fb(\3\2\2\2"+
+		"\u00fc\u00fd\5\u00b5[\2\u00fd\u00fe\5\u00b7\\\2\u00fe\u00ff\5\u00b3Z\2"+
+		"\u00ff\u0100\5\u00a1Q\2\u0100\u0101\5\u00abV\2\u0101\u0102\5\u009dO\2"+
+		"\u0102*\3\2\2\2\u0103\u0104\5\u0091I\2\u0104\u0105\5\u00abV\2\u0105\u0106"+
+		"\5\u0097L\2\u0106,\3\2\2\2\u0107\u0108\5\u00adW\2\u0108\u0109\5\u00b3"+
+		"Z\2\u0109.\3\2\2\2\u010a\u010b\5\u0091I\2\u010b\u010c\5\u0097L\2\u010c"+
 		"\u010d\5\u0097L\2\u010d\60\3\2\2\2\u010e\u010f\5\u0091I\2\u010f\u0110"+
 		"\5\u00a7T\2\u0110\u0111\5\u00a7T\2\u0111\62\3\2\2\2\u0112\u0113\5\u0091"+
 		"I\2\u0113\u0114\5\u00b5[\2\u0114\64\3\2\2\2\u0115\u0116\5\u0093J\2\u0116"+
