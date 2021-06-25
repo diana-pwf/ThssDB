@@ -51,7 +51,7 @@ public class JointTable extends QueryTable{
     }
 
     /**
-     * 注意！TODO：在调用next前一定要先判断hasNext，否则可能出错
+     * 注意！在调用next前一定要先判断hasNext，否则可能出错
      * @return 返回所有表进行笛卡尔积的一种结果
      */
     // 多表进行循环遍历笛卡尔积的方法非常类似加法的进位

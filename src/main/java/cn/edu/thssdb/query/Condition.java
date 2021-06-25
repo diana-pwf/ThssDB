@@ -19,7 +19,7 @@ __________________________________________
 condition :
         comparer comparator comparer
 __________________________________________
-TODO:
+
 when parsing statement,should convert the parsed part to the corresponding class
 
 

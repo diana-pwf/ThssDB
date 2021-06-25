@@ -46,7 +46,7 @@ public class MultipleCondition {
     }
 
     public ResultType JudgeMultipleCondition(QueryRow row){
-        // Todo:需要保证multipleCondition != null
+        // 需要保证multipleCondition != null
         // only one condition
         if(mSingle){
             if(mSingleCondition == null){
@@ -56,7 +56,7 @@ public class MultipleCondition {
                 return mSingleCondition.JudgeCondition(row);
             }
         }
-        // TODO: the visitor function should assure that mLeft and mRight exists
+        // the visitor function should assure that mLeft and mRight exists
         assert mLeft!=null && mRight!=null;
         ResultType mLeftType = mLeft.JudgeMultipleCondition(row);
         ResultType mRightType = mRight.JudgeMultipleCondition(row);

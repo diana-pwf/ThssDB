@@ -52,7 +52,6 @@ public class Database {
     }
   }
 
-  // FIXME: 异常处理
   public Table getTable(String tableName){
     Table table = tables.get(tableName);
     if(table == null){
@@ -120,10 +119,7 @@ public class Database {
 
 
   }
-  // todo: select函数
-  public QueryResult select(ArrayList<String> columnNames, QueryTable queryTable, MultipleCondition conditions, Boolean distinct) {
-    return new QueryResult("");
-  }
+
 
 
   public void insert(String tableName, ArrayList<String> columnsName, String[] values){

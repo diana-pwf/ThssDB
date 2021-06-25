@@ -43,7 +43,6 @@ public class StatementVisitor extends SQLBaseVisitor{
 
     @Override
     public ArrayList<QueryResult> visitSql_stmt_list(SQLParser.Sql_stmt_listContext ctx) {
-        // StringJoiner sj = new StringJoiner("\n\n");
         ArrayList<QueryResult> result = new ArrayList<QueryResult>();
         for (SQLParser.Sql_stmtContext subCtx : ctx.sql_stmt())
             result.add(visitSql_stmt(subCtx));
@@ -257,10 +256,13 @@ public class StatementVisitor extends SQLBaseVisitor{
     public Column visitColumn_def(SQLParser.Column_defContext ctx){
         // 名字
         String columnName = visitColumn_name(ctx.column_name());
-
-        // 类型和最大长度
-        Pair<ColumnType, Integer> columnType = visitType_name(ctx.type_name());
-
+        Pair<ColumnType, Integer> columnType;
+        try {
+            // 类型和最大长度
+            columnType = visitType_name(ctx.type_name());
+        } catch (Exception e){
+            throw e;
+        }
         // 限制
         Pair<Integer, Boolean> columnConstraint = new Pair<>(0, false);
         for(SQLParser.Column_constraintContext constraintCtx: ctx.column_constraint()){
@@ -297,7 +299,7 @@ public class StatementVisitor extends SQLBaseVisitor{
             try{
                 return new Pair<>(ColumnType.STRING, Integer.parseInt(ctx.NUMERIC_LITERAL().getText()));
             } catch (Exception e){
-                // TODO: 创建一种新的 Exception
+                throw e;
             }
         }
         return null;
@@ -595,30 +597,20 @@ public class StatementVisitor extends SQLBaseVisitor{
             columnNames[i] = columnName;
         }
 
-        // table 处理
-        // todo: 看看有无别的写法
-//        int tableNum = ctx.table_query().size();
-//        if (tableNum == 0) {
-//            throw new NotSelectTableException();
-//        }
-//        for (int i = 0; i < tableNum; i++) {
-//
-//        }
         QueryTable queryTable = null;
         try{
             queryTable = visitTable_query_stmt(ctx.table_query(0));
         }catch (Exception e){
-            return new QueryResult(e.toString());
+            return new QueryResult(e.getMessage());
         }
 
 
         // 若session不在事务中，直接执行
         if (!manager.transactionSessions.contains(session)) {
             try {
-                // TODO
                 return database.select(columnNames, queryTable, conditions, distinct);
             } catch (Exception e) {
-                return new QueryResult(e.toString());
+                return new QueryResult(e.getMessage());
             }
         }
 
@@ -654,7 +646,6 @@ public class StatementVisitor extends SQLBaseVisitor{
             }
             else if (manager.blockedSessions.get(0).equals(session)) {
                 // 已经被阻塞，看看本次能否轮到
-                // todo: 为啥只看队列开头第一个
                 int index;
                 boolean blocked = false;
                 for (index = 0; index < tableNames.size(); index++) {
@@ -686,7 +677,7 @@ public class StatementVisitor extends SQLBaseVisitor{
             }
             return database.select(columnNames, queryTable, conditions, distinct);
         } catch (Exception e) {
-            return new QueryResult(e.toString());
+            return new QueryResult(e.getMessage());
         }
 
 
@@ -719,7 +710,6 @@ public class StatementVisitor extends SQLBaseVisitor{
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
-        // todo: 为啥sgl的里面 conditions为null时不加事务
         Table table = database.getTable(tableName);
 
         // 不在事务中正常执行
@@ -728,7 +718,7 @@ public class StatementVisitor extends SQLBaseVisitor{
                 // table.freeXLock(session);
                 return new QueryResult(database.update(tableName, columnName, comparer, conditions));
             } catch (Exception e) {
-                return new QueryResult(e.toString());
+                return new QueryResult(e.getMessage());
             }
         }
 
@@ -961,7 +951,6 @@ public class StatementVisitor extends SQLBaseVisitor{
             manager.sLockDict.replace(session, tablesLock);
             ArrayList<String> tablexLock = new ArrayList<>();
             manager.xLockDict.replace(session, tablexLock);
-            // todo: sgl为啥不对sLock做任何操作
 
             return "Successfully auto commit";
         }
@@ -1059,22 +1048,14 @@ public class StatementVisitor extends SQLBaseVisitor{
         return null;
     }
 
-
-
-    private Database getCurrentDB() {
-
-        Database current_base = manager.getCurrentDatabase();
-        if(current_base == null) {
-            throw new DatabaseNotExistException();
-        }
-        return current_base;
-    }
-
     // @Override
     public QueryTable visitTable_query_stmt (SQLParser.Table_queryContext ctx) {
-        // todo: 看看这个有无别的写法  考虑：如果table不存在呢？
         Database database = null;
-        database = getCurrentDB();
+        try {
+            database = manager.getCurrentDatabase();
+        }catch (Exception e){
+            throw e;
+        }
         // 处理单一逻辑
         if (ctx.K_JOIN().size() == 0) {
             Table table = database.getTable(ctx.table_name(0).getText());

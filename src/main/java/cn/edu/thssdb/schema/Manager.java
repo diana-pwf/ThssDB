@@ -125,6 +125,9 @@ public class Manager {
   }
 
   public Database getCurrentDatabase() {
+    if(currentDatabase == null){
+      throw new DatabaseNotExistException();
+    }
     return currentDatabase;
   }
 

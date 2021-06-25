@@ -27,7 +27,7 @@ public class QueryResult {
   private boolean selectDistinct;
   private HashSet<String> rowHashSet;
 
-  // TODO:注意 QueryResult在数据为空的时候返回的不是null，而是ArrayList<Row>()
+  // 注意 QueryResult在数据为空的时候返回的不是null，而是ArrayList<Row>()
 
   /**
    *  查询结果构造 支持Distinct指令

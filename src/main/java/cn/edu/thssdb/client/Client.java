@@ -245,7 +245,6 @@ public class Client {
   }
 
   static void showHelp() {
-    // TODO
     println("DO IT YOURSELF");
   }
 
