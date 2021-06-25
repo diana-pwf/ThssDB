@@ -42,18 +42,6 @@ public class SingleTable extends QueryTable{
                 }
                 return;
             }
-//            if(cond.mType== ComparatorType.EQ&&init){
-//                Comparable constValue;
-//                if(cond.mLeft.mType!=cond.mRight.mType){
-//                    if(cond.mLeft.mType==ComparerType.COLUMN&&table.cond.mLeft.mValue){
-//                        constValue = cond.mRight.mValue;
-//                    }
-//                    else{
-//                        constValue = cond.mLeft.mValue;
-//                    }
-//                    addNextByCache(constValue)
-//                }
-//            }
         }
         addNextByCondition();
 
