@@ -220,7 +220,6 @@ public class Database {
         dropTable(table.tableName);
       }
 
-
       // tables.clear();
       tables = null;
 

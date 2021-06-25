@@ -91,20 +91,18 @@ public class Table implements Iterable<Row> {
   /**
    * 功能：给定一个 ArrayList<Entry>，实际将数据插入表中
    * @param entryList
-   * TODO: 页式存储修改时应该只需要修改这部分。
    */
+
   public void insertEntries(ArrayList<Entry> entryList) {
     try{
-      lock.writeLock().lock();
       // put 里面自己有检测 duplicated key
       index.put(entryList.get(primaryIndex), new Row(entryList.toArray(new Entry[0])));
       entries.add(entryList.get(primaryIndex));
     }catch (Exception e){
       throw e;
-    }finally{
-      lock.writeLock().unlock();
     }
   }
+
 
   /**
    * 功能：给定一个 String 列表，构建一个 ArrayList<Entry> 之后传给 insert(ArrayList<Entry> entry_list) 真正进行插入
@@ -136,8 +134,15 @@ public class Table implements Iterable<Row> {
         throw e;
       }
     }
+    try{
+      lock.writeLock().lock();
+      insertEntries(rowEntries);
+    }catch (Exception e){
+      throw e;
+    }finally{
+      lock.writeLock().unlock();
+    }
 
-    insertEntries(rowEntries);
   }
 
   /**
@@ -202,19 +207,9 @@ public class Table implements Iterable<Row> {
         throw e;
       }
     }
-    insertEntries(rowEntries);
-  }
-
-
-  /**
-   *  功能：提供待删除记录的主 entry，将对应记录自 index 中删除
-   *  参数：entry为待删除记录的主 entry
-   */
-  public void deleteEntry(Entry entry) {
     try{
       lock.writeLock().lock();
-      index.remove(entry);
-      entries.remove(entry);
+      insertEntries(rowEntries);
     }catch (Exception e){
       throw e;
     }finally{
@@ -224,11 +219,24 @@ public class Table implements Iterable<Row> {
 
 
   /**
+   *  功能：提供待删除记录的主 entry，将对应记录自 index 中删除
+   *  参数：entry为待删除记录的主 entry
+   */
+  public void deleteEntry(Entry entry) {
+    try{
+      index.remove(entry);
+      entries.remove(entry);
+    }catch (Exception e){
+      throw e;
+    }
+  }
+
+
+  /**
    * 功能：遍历表中的 Row，针对每一行数据进行逻辑判断（是否符合删除的条件）
    * @param conditions: 删除条件
    */
 
-  // FIXME: use multipleCondition to delete,
   public String delete(MultipleCondition conditions){
     Integer count = 0;
     MultipleCondition condition = conditions;
@@ -237,15 +245,18 @@ public class Table implements Iterable<Row> {
       QueryRow queryRow = new QueryRow(info, row);
       if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
         try{
+          lock.writeLock().lock();
           deleteEntry(row.getEntries().get(primaryIndex));
-        } catch(Exception e){
+        }catch (Exception e){
           throw e;
+        }finally{
+          lock.writeLock().unlock();
         }
         ++count;
       }
     }
-    // FIXME: change return value
-    return count.toString();
+    if(count == 0) return "Deleted no data in " + tableName + ". There might be something wrong while specifying columns or conditions.";
+    return "Successfully deleted " + count.toString() + " data from the table: " + tableName;
   }
 
   // TODO:事务处理
@@ -315,21 +326,25 @@ public class Table implements Iterable<Row> {
         newRow.getEntries().get(index).value = newValue;
 
         // 分为是否更新主键有不同操作
-        try{
-          if(column.isPrimary() && oldValue != newValue){
+
+        try {
+          lock.writeLock().lock();
+          if(column.isPrimary() && oldValue != newValue) {
             insertEntries(newRow.getEntries());
             deleteEntry(entry);
-          } else {
+          }else {
             this.index.update(entry, newRow);
           }
-        }catch (Exception e){
+        } catch (Exception e){
           throw e;
+        } finally {
+          lock.writeLock().unlock();
         }
         ++count;
       }
     }
-
-    return count.toString();
+    if(count == 0) return "No data in " + tableName + " matched conditions. Updated no data in " + tableName + ".";
+    return "Successfully updated " + count.toString() + " data from the table: " + tableName;
   }
 
 
