@@ -222,10 +222,10 @@ public class Table implements Iterable<Row> {
   // FIXME: use multipleCondition to delete,
   public String delete(MultipleCondition conditions){
     Integer count = 0;
+    MultipleCondition condition = conditions;
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
-      MultipleCondition condition = conditions;
       if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
         try{
           deleteEntry(row.getEntries().get(primaryIndex));
@@ -327,21 +327,16 @@ public class Table implements Iterable<Row> {
         } catch (Exception e){
           throw e;
         }
-        Row newRow = new Row(oldRow.getEntries().toArray(new Entry[0]));
+
+        Row newRow = new Row(oldRow);
+        // newRow.appendEntries(oldRow.getEntries());
         newRow.getEntries().get(index).value = newValue;
 
         // 分为是否更新主键有不同操作
         if(column.isPrimary() && oldValue != newValue){
-          try{
-            // 先插入，检查是否有冲突
-            insertEntries(newRow.getEntries());
-            // 没有冲突才更新 entries
-            entries.remove(entry);
-            entries.add(newRow.getEntries().get(primaryIndex));
-          } catch (Exception e){
-            throw e;
-          }
-        }else {
+          insertEntries(newRow.getEntries());
+          deleteEntry(entry);
+        } else {
           try {
             this.index.update(entry, newRow);
           } catch (Exception e) {
