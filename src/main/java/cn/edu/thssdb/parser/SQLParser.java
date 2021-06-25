@@ -18,9 +18,9 @@ public class SQLParser extends Parser {
 		new PredictionContextCache();
 	public static final int
 		T__0=1, T__1=2, T__2=3, T__3=4, T__4=5, EQ=6, NE=7, LT=8, GT=9, LE=10, 
-		GE=11, ADD=12, SUB=13, MUL=14, DIV=15, AND=16, OR=17, T_INT=18, T_LONG=19, 
-		T_FLOAT=20, T_DOUBLE=21, T_STRING=22, K_ADD=23, K_ALL=24, K_AS=25, K_BY=26, 
-		K_COLUMN=27, K_CREATE=28, K_DATABASE=29, K_DATABASES=30, K_DELETE=31, 
+		GE=11, ADD=12, SUB=13, MUL=14, DIV=15, T_INT=16, T_LONG=17, T_FLOAT=18, 
+		T_DOUBLE=19, T_STRING=20, K_AND=21, K_OR=22, K_ADD=23, K_ALL=24, K_AS=25, 
+		K_BY=26, K_COLUMN=27, K_CREATE=28, K_DATABASE=29, K_DATABASES=30, K_DELETE=31, 
 		K_DISTINCT=32, K_DROP=33, K_EXISTS=34, K_FROM=35, K_GRANT=36, K_IF=37, 
 		K_IDENTIFIED=38, K_INSERT=39, K_INTO=40, K_JOIN=41, K_KEY=42, K_NOT=43, 
 		K_NULL=44, K_ON=45, K_PRIMARY=46, K_QUIT=47, K_REVOKE=48, K_SELECT=49, 
@@ -67,8 +67,8 @@ public class SQLParser extends Parser {
 	private static String[] makeSymbolicNames() {
 		return new String[] {
 			null, null, null, null, null, null, "EQ", "NE", "LT", "GT", "LE", "GE", 
-			"ADD", "SUB", "MUL", "DIV", "AND", "OR", "T_INT", "T_LONG", "T_FLOAT", 
-			"T_DOUBLE", "T_STRING", "K_ADD", "K_ALL", "K_AS", "K_BY", "K_COLUMN", 
+			"ADD", "SUB", "MUL", "DIV", "T_INT", "T_LONG", "T_FLOAT", "T_DOUBLE", 
+			"T_STRING", "K_AND", "K_OR", "K_ADD", "K_ALL", "K_AS", "K_BY", "K_COLUMN", 
 			"K_CREATE", "K_DATABASE", "K_DATABASES", "K_DELETE", "K_DISTINCT", "K_DROP", 
 			"K_EXISTS", "K_FROM", "K_GRANT", "K_IF", "K_IDENTIFIED", "K_INSERT", 
 			"K_INTO", "K_JOIN", "K_KEY", "K_NOT", "K_NULL", "K_ON", "K_PRIMARY", 
@@ -2128,8 +2128,8 @@ public class SQLParser extends Parser {
 		public Multiple_conditionContext multiple_condition(int i) {
 			return getRuleContext(Multiple_conditionContext.class,i);
 		}
-		public TerminalNode AND() { return getToken(SQLParser.AND, 0); }
-		public TerminalNode OR() { return getToken(SQLParser.OR, 0); }
+		public TerminalNode K_AND() { return getToken(SQLParser.K_AND, 0); }
+		public TerminalNode K_OR() { return getToken(SQLParser.K_OR, 0); }
 		public Multiple_conditionContext(ParserRuleContext parent, int invokingState) {
 			super(parent, invokingState);
 		}
@@ -2187,7 +2187,7 @@ public class SQLParser extends Parser {
 						setState(349);
 						if (!(precpred(_ctx, 2))) throw new FailedPredicateException(this, "precpred(_ctx, 2)");
 						setState(350);
-						match(AND);
+						match(K_AND);
 						setState(351);
 						multiple_condition(3);
 						}
@@ -2199,7 +2199,7 @@ public class SQLParser extends Parser {
 						setState(352);
 						if (!(precpred(_ctx, 1))) throw new FailedPredicateException(this, "precpred(_ctx, 1)");
 						setState(353);
-						match(OR);
+						match(K_OR);
 						setState(354);
 						multiple_condition(2);
 						}
@@ -3344,15 +3344,15 @@ public class SQLParser extends Parser {
 		"\u0143\3\2\2\2\u0143/\3\2\2\2\u0144\u0145\5R*\2\u0145\u0149\5\62\32\2"+
 		"\u0146\u0148\5\64\33\2\u0147\u0146\3\2\2\2\u0148\u014b\3\2\2\2\u0149\u0147"+
 		"\3\2\2\2\u0149\u014a\3\2\2\2\u014a\61\3\2\2\2\u014b\u0149\3\2\2\2\u014c"+
-		"\u0155\7\24\2\2\u014d\u0155\7\25\2\2\u014e\u0155\7\26\2\2\u014f\u0155"+
-		"\7\27\2\2\u0150\u0151\7\30\2\2\u0151\u0152\7\4\2\2\u0152\u0153\7?\2\2"+
+		"\u0155\7\22\2\2\u014d\u0155\7\23\2\2\u014e\u0155\7\24\2\2\u014f\u0155"+
+		"\7\25\2\2\u0150\u0151\7\26\2\2\u0151\u0152\7\4\2\2\u0152\u0153\7?\2\2"+
 		"\u0153\u0155\7\6\2\2\u0154\u014c\3\2\2\2\u0154\u014d\3\2\2\2\u0154\u014e"+
 		"\3\2\2\2\u0154\u014f\3\2\2\2\u0154\u0150\3\2\2\2\u0155\63\3\2\2\2\u0156"+
 		"\u0157\7\60\2\2\u0157\u015b\7,\2\2\u0158\u0159\7-\2\2\u0159\u015b\7.\2"+
 		"\2\u015a\u0156\3\2\2\2\u015a\u0158\3\2\2\2\u015b\65\3\2\2\2\u015c\u015d"+
 		"\b\34\1\2\u015d\u015e\58\35\2\u015e\u0167\3\2\2\2\u015f\u0160\f\4\2\2"+
-		"\u0160\u0161\7\22\2\2\u0161\u0166\5\66\34\5\u0162\u0163\f\3\2\2\u0163"+
-		"\u0164\7\23\2\2\u0164\u0166\5\66\34\4\u0165\u015f\3\2\2\2\u0165\u0162"+
+		"\u0160\u0161\7\27\2\2\u0161\u0166\5\66\34\5\u0162\u0163\f\3\2\2\u0163"+
+		"\u0164\7\30\2\2\u0164\u0166\5\66\34\4\u0165\u015f\3\2\2\2\u0165\u0162"+
 		"\3\2\2\2\u0166\u0169\3\2\2\2\u0167\u0165\3\2\2\2\u0167\u0168\3\2\2\2\u0168"+
 		"\67\3\2\2\2\u0169\u0167\3\2\2\2\u016a\u016b\5> \2\u016b\u016c\5<\37\2"+
 		"\u016c\u016d\5> \2\u016d9\3\2\2\2\u016e\u0171\5J&\2\u016f\u0171\5H%\2"+

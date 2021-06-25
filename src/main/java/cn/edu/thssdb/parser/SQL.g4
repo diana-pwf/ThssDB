@@ -107,8 +107,8 @@ column_constraint :
 
 multiple_condition :
     condition
-    | multiple_condition AND multiple_condition
-    | multiple_condition OR multiple_condition ;
+    | multiple_condition K_AND multiple_condition
+    | multiple_condition K_OR multiple_condition ;
 
 condition :
     expression comparator expression;
@@ -179,14 +179,16 @@ SUB : '-';
 MUL : '*';
 DIV : '/';
 
-AND : A N D;
-OR : O R;
+
 
 T_INT : I N T;
 T_LONG : L O N G;
 T_FLOAT : F L O A T;
 T_DOUBLE : D O U B L E;
 T_STRING : S T R I N G;
+
+K_AND : A N D;
+K_OR : O R;
 
 K_ADD : A D D;
 K_ALL : A L L;
