@@ -214,7 +214,7 @@ public class Table implements Iterable<Row> {
 
   /**
    * 功能：遍历表中的 Row，针对每一行数据进行逻辑判断（是否符合删除的条件）
-   * @param condition: 删除条件
+   * @param conditions: 删除条件
    */
 
   // FIXME: use multipleCondition to delete,
