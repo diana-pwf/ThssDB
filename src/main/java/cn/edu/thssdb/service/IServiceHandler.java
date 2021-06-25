@@ -85,6 +85,8 @@ public class IServiceHandler implements IService.Iface {
     String[] statements = req.getStatement().split(";");
     ArrayList<QueryResult> queryResults = new ArrayList<QueryResult>();
     for (String statement : statements) {
+      // 对空白符有做一些处理
+
       statement = statement.trim();
 
       // 无内容则跳过
@@ -92,11 +94,17 @@ public class IServiceHandler implements IService.Iface {
         continue;
       }
 
-      // TODO: 可以对空白符做一些处理
-      String command = statement;
-      // TODO: 考虑事务
-      ArrayList<QueryResult> result = handleCommand(command, req.sessionId, manager);
-      queryResults.addAll(result);
+      String command = statement.split(" ")[0].toLowerCase();
+      if (manager.transactionSessions.contains(req.sessionId) && (command.equals("insert") || command.equals("update") || command.equals("delete") || command.equals("select"))) {
+        handleCommand("auto begin transaction", req.sessionId, manager);
+        ArrayList<QueryResult> result = handleCommand(statement, req.sessionId, manager);
+        queryResults.addAll(result);
+        handleCommand("auto commit", req.sessionId, manager);
+      }
+      else {
+        ArrayList<QueryResult> result = handleCommand(statement, req.sessionId, manager);
+        queryResults.addAll(result);
+      }
 
     }
 
