@@ -49,6 +49,8 @@ public class Table implements Iterable<Row> {
     for (int i = 0; i < this.columns.size(); i++)
     {
       if (this.columns.get(i).isPrimary()){
+
+
         primaryIndex = i;
         break;
       }
@@ -214,7 +216,7 @@ public class Table implements Iterable<Row> {
 
   /**
    * 功能：遍历表中的 Row，针对每一行数据进行逻辑判断（是否符合删除的条件）
-   * @param condition: 删除条件
+   * @param conditions: 删除条件
    */
 
   // FIXME: use multipleCondition to delete,
@@ -304,10 +306,10 @@ public class Table implements Iterable<Row> {
     if(index < 0){
       throw new ColumnNotExistException(databaseName, tableName, columnName);
     }
+    MultipleCondition condition = new MultipleCondition(conditions);
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
-      MultipleCondition condition = new MultipleCondition(conditions);
       if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
         // 取得主键
         Entry entry = queryRow.getEntries().get(primaryIndex);

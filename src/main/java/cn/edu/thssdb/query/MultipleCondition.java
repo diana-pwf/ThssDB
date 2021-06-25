@@ -42,6 +42,7 @@ public class MultipleCondition {
         mRight = conditions.mRight;
         mType = conditions.mType;
         mSingle = conditions.mSingle;
+        mSingleCondition = conditions.mSingleCondition;
     }
 
     public ResultType JudgeMultipleCondition(QueryRow row){

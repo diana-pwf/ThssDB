@@ -78,6 +78,7 @@ public class Client {
             disconnect();
             break;
           case Global.QUIT:
+          case Global.QUIT_FAKE:
             open = false;
           default:
             executeStatement(msg.trim());
