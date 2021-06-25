@@ -533,16 +533,11 @@ public class StatementVisitor extends SQLBaseVisitor{
     /** 执行show table指令 **/
     @Override
     public QueryResult visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
-        Database database = null;
-        try{
-            database = getCurrentDB();
-        }
-        catch (Exception e){
-            return new QueryResult(e.getMessage());
-        }
+        String databaseName = visitDatabase_name(ctx.database_name());
         String msg;
         try {
-            msg = database.showAllTables();
+            msg = manager.getDatabaseByName(databaseName).showAllTables();
+            //msg = database.showAllTables();
         } catch (Exception e) {
             msg = e.getMessage();
         }
