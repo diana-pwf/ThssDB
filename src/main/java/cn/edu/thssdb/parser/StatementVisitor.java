@@ -469,15 +469,16 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         // column 处理
-        ArrayList<String> columnNames = new ArrayList<String>();
+
         int columnNum = ctx.result_column().size();
+        String[] columnNames = new String[columnNum];
         for (int i = 0; i < columnNum; i++) {
             String columnName = visitResult_column(ctx.result_column(i));
             if (columnName.equals("*")) {
-                columnNames.clear();
+                columnNames = null;
                 break;
             }
-            columnNames.add(columnName);
+            columnNames[i] = columnName;
         }
 
         // table 处理
@@ -489,7 +490,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 //        for (int i = 0; i < tableNum; i++) {
 //
 //        }
-        QueryTable queryTable = visitTableQuery_stmt(ctx.table_query(0));
+        QueryTable queryTable = visitTable_query_stmt(ctx.table_query(0));
 
         // 若session不在事务中，直接执行
 
@@ -693,15 +694,8 @@ public class StatementVisitor extends SQLBaseVisitor{
         return current_base;
     }
 
-    public QueryTable visitQueryTable() {
-        // TODO: 单一表
-
-        // TODO: 处理复合逻辑
-
-        return null;
-
     // @Override
-    public QueryTable visitTableQuery_stmt(SQLParser.Table_queryContext ctx) {
+    public QueryTable visitTable_query_stmt (SQLParser.Table_queryContext ctx) {
         // todo: 看看这个有无别的写法  考虑：如果table不存在呢？
         Database database = manager.getCurrentDatabase();
     // 处理单一逻辑
