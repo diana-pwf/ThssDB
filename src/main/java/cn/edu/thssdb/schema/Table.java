@@ -54,6 +54,7 @@ public class Table implements Iterable<Row> {
       }
     }
     this.entries = new ArrayList<>();
+    recover();
   }
 
   private void checkNull(ArrayList<Column> columns, ArrayList<Entry> entries){
@@ -290,7 +291,6 @@ public class Table implements Iterable<Row> {
 
 
   /**
-   *  TODO:
    *  参数：columnName为要更新的那一列的属性名称，comparer为待更新的值， conditions为where后所接的条件表达式
    *  功能：将满足条件表达式的行的相应属性更新为相应的值
    *  返回值：向客户端说明执行情况
@@ -314,13 +314,12 @@ public class Table implements Iterable<Row> {
         Row oldRow = getRow(entry);
         Column column = this.columns.get(index);
         ValueParser vp = new ValueParser();
-        // FIXME: 暂时测试用，需要重载 getValue for comparer
-        Comparable newValue = 100;
+
+        Comparable newValue;
         Comparable oldValue = oldRow.getEntries().get(index).value;
         try {
-          // TODO: add getValue for comparer
-          // value = vp.getValue(column, )
-          // vp.checkValid(column, value);
+          newValue = vp.compararToComparable(column, comparer);
+          vp.checkValid(column, newValue);
         } catch (Exception e){
           throw e;
         }
@@ -349,7 +348,7 @@ public class Table implements Iterable<Row> {
       }
     }
 
-    return "";
+    return count.toString();
   }
 
 

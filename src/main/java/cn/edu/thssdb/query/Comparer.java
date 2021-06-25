@@ -34,4 +34,12 @@ public class Comparer {
                 mValue = null;
         }
     }
+
+    public ComparerType getType(){
+        return mType;
+    }
+
+    public Comparable getValue(){
+        return mValue;
+    }
 }

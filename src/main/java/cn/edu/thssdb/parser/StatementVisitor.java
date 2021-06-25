@@ -524,9 +524,9 @@ public class StatementVisitor extends SQLBaseVisitor{
             return new QueryResult(e.getMessage());
         }
 
-        String table_name = visitTable_name(ctx.table_name());
+        String tableName = visitTable_name(ctx.table_name());
 
-        String column_name = visitColumn_name(ctx.column_name());
+        String columnName = visitColumn_name(ctx.column_name());
 
         Comparer comparer = visitExpression(ctx.expression());
 
@@ -535,14 +535,16 @@ public class StatementVisitor extends SQLBaseVisitor{
             conditions = visitMultiple_condition(ctx.multiple_condition());
         }
 
+        String msg = "";
         // TODO: 考虑事务
         try{
-            return new QueryResult(database.update(table_name, column_name, comparer, conditions));
+            msg = "Successfully updated " + database.update(tableName, columnName, comparer, conditions) +
+                    " data from the table: " + tableName;
         }
         catch (Exception e) {
-            return new QueryResult(e.getMessage());
+            msg = e.getMessage();
         }
-
+        return new QueryResult(msg);
     }
 
     /** 执行show db指令 **/
