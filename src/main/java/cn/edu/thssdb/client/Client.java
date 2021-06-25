@@ -47,6 +47,7 @@ public class Client {
   private static String username;
   private static String password;
   private static long sessionId = -1;
+  private static String transaction = "";
 
   public static void main(String[] args) {
     commandLine = parseCmd(args);
@@ -64,7 +65,7 @@ public class Client {
       client = new IService.Client(protocol);
       boolean open = true;
       while (true) {
-        print(Global.CLI_PREFIX);
+        print(Global.CLI_PREFIX + transaction);
         String msg = SCANNER.nextLine();
         long startTime = System.currentTimeMillis();
         switch (msg.trim()) {
@@ -171,8 +172,15 @@ public class Client {
         // 否则：直接打印响应中列表中的结果
         else {
           for (String item: executeStatementResp.columnsList) {
-            // TODO: 对事务相关指令的处理
-            println(item);
+              item = item.trim();
+              if(item.equals("successfully begin transaction")) {
+                transaction = "(in transaction)";
+              }
+              else if(item.equals("Successfully commit"))
+              {
+                transaction = "";
+              }
+              println(item);
           }
         }
 
