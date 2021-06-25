@@ -342,12 +342,9 @@ public class StatementVisitor extends SQLBaseVisitor{
         catch (Exception e){
             return new QueryResult(e.getMessage());
         }
-        // TODO: find out difference between toString() and getText()
-        //       toString = '[' + getText() + ']' （貌似）
         String tableName = visitTable_name(ctx.table_name());
         String msg = "Successfully inserted data into the table: " + tableName + " in database: " + db.getName();
 
-        // FIXME: naive insert without dealing with transaction and lock
         // 处理插入值
         ArrayList<String[]> valueList = new ArrayList<>();
         for(SQLParser.Value_entryContext valueEntryContext: ctx.value_entry()){
@@ -391,7 +388,7 @@ public class StatementVisitor extends SQLBaseVisitor{
 
         MultipleCondition conditions = (ctx.K_WHERE() == null ? null : visitMultiple_condition(ctx.multiple_condition()));
         try{
-            msg = "Successfully deleted " + db.delete(tableName, conditions) + " data from the table: " + tableName;
+            msg = db.delete(tableName, conditions);
         } catch (Exception e){
             msg = e.getMessage();
         }
@@ -512,10 +509,8 @@ public class StatementVisitor extends SQLBaseVisitor{
         }
 
         String msg = "";
-        // TODO: 考虑事务
         try{
-            msg = "Successfully updated " + database.update(tableName, columnName, comparer, conditions) +
-                    " data from the table: " + tableName;
+            msg = database.update(tableName, columnName, comparer, conditions);
         }
         catch (Exception e) {
             msg = e.getMessage();
