@@ -25,6 +25,9 @@ public class ValueParser {
                 case DOUBLE:
                     return Double.parseDouble(string);
                 case STRING:
+                    if(string!=null && string.indexOf('\'') != 0 && string.lastIndexOf('\'') != string.length() - 1){
+                        throw new ValueTypeMismatchException(column);
+                    }
                     return string;
                 default:
                     return null;
@@ -43,7 +46,7 @@ public class ValueParser {
         if(value != null && column.getType() == ColumnType.STRING ){
             int maxLength = column.getMaxLength();
             int valLength = ((String)value).length();
-            if(maxLength > -1 && valLength > maxLength){
+            if(maxLength > -1 && valLength > maxLength + 2){
                 throw new ValueExceedMaxLengthException(column.getName(), maxLength, valLength);
             }
         }
@@ -51,29 +54,36 @@ public class ValueParser {
 
     public Comparable compararToComparable(Column column, Comparer comparer) throws ValueTypeMismatchException{
         // null
-        if(comparer == null || comparer.getValue() == null || comparer.getType() == null){
+        if(comparer == null || comparer.getValue() == null || comparer.getType() == ComparerType.NULL){
             return null;
         } else if (comparer.getType() == ComparerType.NUMERIC){
             // num
             String valueString = comparer.getValue().toString();
-            switch (column.getType()){
-                case INT:
-                    return Integer.parseInt(valueString.substring(0, valueString.indexOf('.')));
-                case LONG:
-                    return Long.parseLong(valueString.substring(0, valueString.indexOf('.')));
-                case FLOAT:
-                    return Float.parseFloat(valueString);
-                case DOUBLE:
-                    return Double.parseDouble(valueString);
-                default:
+            try{
+                switch (column.getType()){
+                    case INT:
+                        return Integer.parseInt(valueString.substring(0, valueString.indexOf('.')));
+                    case LONG:
+                        return Long.parseLong(valueString.substring(0, valueString.indexOf('.')));
+                    case FLOAT:
+                        return Float.parseFloat(valueString);
+                    case DOUBLE:
+                        return Double.parseDouble(valueString);
+                    default:
+                }
+            }catch (Exception e){
+                throw new ValueTypeMismatchException(column);
             }
+
         }else if (comparer.getType() == ComparerType.STRING && column.getType() == ColumnType.STRING){
             // string
-            return comparer.getValue().toString();
+            String string = comparer.getValue().toString();
+            if(string.indexOf('\'') == 0 && string.lastIndexOf('\'') == string.length() - 1){
+                return string;
+            }
         }
 
         // 如果不属于上面任何一种情况，表示类型有错误
-        // FIXME: 请新增一种错误
         throw new ValueTypeMismatchException(column);
     }
 }

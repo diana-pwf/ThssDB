@@ -1,4 +1,4 @@
-// Generated from C:/Users/86181/Desktop/course/大三下/数据库/选题一框架/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.9.1
+// Generated from /Users/anyanzhe/workspace/ThssDB/src/main/java/cn/edu/thssdb/parser/SQL.g4 by ANTLR 4.8
 package cn.edu.thssdb.parser;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -37,26 +37,6 @@ public interface SQLListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitSql_stmt(SQLParser.Sql_stmtContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link SQLParser#auto_commit_stmt}.
-	 * @param ctx the parse tree
-	 */
-	void enterAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link SQLParser#auto_commit_stmt}.
-	 * @param ctx the parse tree
-	 */
-	void exitAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link SQLParser#auto_begin_transaction_stmt}.
-	 * @param ctx the parse tree
-	 */
-	void enterAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link SQLParser#auto_begin_transaction_stmt}.
-	 * @param ctx the parse tree
-	 */
-	void exitAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SQLParser#create_db_stmt}.
 	 * @param ctx the parse tree
@@ -257,26 +237,6 @@ public interface SQLListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitUpdate_stmt(SQLParser.Update_stmtContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link SQLParser#begin_transaction_stmt}.
-	 * @param ctx the parse tree
-	 */
-	void enterBegin_transaction_stmt(SQLParser.Begin_transaction_stmtContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link SQLParser#begin_transaction_stmt}.
-	 * @param ctx the parse tree
-	 */
-	void exitBegin_transaction_stmt(SQLParser.Begin_transaction_stmtContext ctx);
-	/**
-	 * Enter a parse tree produced by {@link SQLParser#commit_stmt}.
-	 * @param ctx the parse tree
-	 */
-	void enterCommit_stmt(SQLParser.Commit_stmtContext ctx);
-	/**
-	 * Exit a parse tree produced by {@link SQLParser#commit_stmt}.
-	 * @param ctx the parse tree
-	 */
-	void exitCommit_stmt(SQLParser.Commit_stmtContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SQLParser#column_def}.
 	 * @param ctx the parse tree

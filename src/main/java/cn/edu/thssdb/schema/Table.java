@@ -175,7 +175,7 @@ public class Table implements Iterable<Row> {
         throw new ColumnNotExistException(databaseName, tableName, name);
       }
       if(index != this.columnsName.lastIndexOf(name)){
-        throw new DuplicateColumnException(name);
+        throw new DuplicateColumnException("insert", name);
       }
     }
 
@@ -231,10 +231,10 @@ public class Table implements Iterable<Row> {
   // FIXME: use multipleCondition to delete,
   public String delete(MultipleCondition conditions){
     Integer count = 0;
+    MultipleCondition condition = conditions;
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
-      MultipleCondition condition = conditions;
       if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
         try{
           deleteEntry(row.getEntries().get(primaryIndex));
@@ -273,89 +273,57 @@ public class Table implements Iterable<Row> {
   }
 
   /**
-   *  FIXME:
-   *  功能：提供待修改记录的主 entry，将根据传入参数修改 row
-   *  参数：entry为待修改记录的主 entry，columns 和 entries 是要修改的对应属性和值
-   */
-  /*
-  public void update(Entry primaryEntry, ArrayList<Column> columns, ArrayList<Entry> entries) {
-    Row row = this.getRow(primaryEntry);
-    int columnsLen = columns.size();
-    int schemaIndex = 0, columnIndex = 0;
-    for(; columnIndex < columnsLen; columnIndex++){
-      while(columns.get(columnIndex).compareTo(this.columns.get(schemaIndex)) != 0){
-        ++schemaIndex;
-      }
-      row.entries.get(schemaIndex).value = entries.get(schemaIndex).value;
-    }
-    try {
-      lock.writeLock().lock();
-      index.update(row.getEntries().get(primaryIndex), row);
-      entries.set(primaryIndex, row.getEntries().get(primaryIndex));
-    }catch(Exception e){
-      throw e;
-    }finally{
-      lock.writeLock().unlock();
-    }
-  }
-
-   */
-
-
-  /**
    *  参数：columnName为要更新的那一列的属性名称，comparer为待更新的值， conditions为where后所接的条件表达式
    *  功能：将满足条件表达式的行的相应属性更新为相应的值
    *  返回值：向客户端说明执行情况
    */
   public String update(String columnName, Comparer comparer, MultipleCondition conditions) {
     Integer count = 0;
+
     // 取得修改的位置
     int index = this.columnsName.indexOf(columnName);
     // 没有找到对应列
     if(index < 0){
       throw new ColumnNotExistException(databaseName, tableName, columnName);
     }
+    // 设置修改列
+    Column column = this.columns.get(index);
+
+    // 检查 type
+    ValueParser vp = new ValueParser();
+    Comparable newValue;
+    try {
+      newValue = vp.compararToComparable(column, comparer);
+      vp.checkValid(column, newValue);
+    } catch (Exception e){
+      throw e;
+    }
+
+    // 记录逻辑判断条件
     MultipleCondition condition = new MultipleCondition(conditions);
     for(Row row : this){
       MetaInfo info = new MetaInfo(databaseName, tableName, columns);
       QueryRow queryRow = new QueryRow(info, row);
       if(condition == null || condition.JudgeMultipleCondition(queryRow) == ResultType.TRUE ) {
-        // 取得主键
+        // 取得旧主键
         Entry entry = queryRow.getEntries().get(primaryIndex);
 
         // 取得旧行并构建新行
         Row oldRow = getRow(entry);
-        Column column = this.columns.get(index);
-        ValueParser vp = new ValueParser();
-
-        Comparable newValue;
         Comparable oldValue = oldRow.getEntries().get(index).value;
-        try {
-          newValue = vp.compararToComparable(column, comparer);
-          vp.checkValid(column, newValue);
-        } catch (Exception e){
-          throw e;
-        }
-        Row newRow = new Row(oldRow.getEntries().toArray(new Entry[0]));
+        Row newRow = new Row(oldRow);
         newRow.getEntries().get(index).value = newValue;
 
         // 分为是否更新主键有不同操作
-        if(column.isPrimary() && oldValue != newValue){
-          try{
-            // 先插入，检查是否有冲突
+        try{
+          if(column.isPrimary() && oldValue != newValue){
             insertEntries(newRow.getEntries());
-            // 没有冲突才更新 entries
-            entries.remove(entry);
-            entries.add(newRow.getEntries().get(primaryIndex));
-          } catch (Exception e){
-            throw e;
-          }
-        }else {
-          try {
+            deleteEntry(entry);
+          } else {
             this.index.update(entry, newRow);
-          } catch (Exception e) {
-            throw e;
           }
+        }catch (Exception e){
+          throw e;
         }
         ++count;
       }
@@ -397,8 +365,8 @@ public class Table implements Iterable<Row> {
               new File(fileName)));
       oo.writeObject(rows);
       System.out.println("successfully serialize file!");
-      oo.close();}
-    catch(Exception e){
+      oo.close();
+    } catch(Exception e){
       System.out.println("error occurs when serializing file");
     }
   }
@@ -409,6 +377,7 @@ public class Table implements Iterable<Row> {
       ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
       rows = (ArrayList<Row>) ois.readObject();
       System.out.println("successfully deserialize file! ");
+      ois.close();
     } catch (Exception e) {
       rows = null;
       System.out.println("error occurs when deserializing file");
@@ -417,7 +386,7 @@ public class Table implements Iterable<Row> {
   }
 
   public String showMeta() {
-    String schema = "columnName, columnType, primaryKeyIndex, isNull, maxLength";
+    String schema = "columnName, columnType, primaryKey, isNull, maxLength";
     StringBuilder result = new StringBuilder("tableName: " + tableName + "\n" + schema + "\n");
     for(Column column : columns) {
       if(column != null) {

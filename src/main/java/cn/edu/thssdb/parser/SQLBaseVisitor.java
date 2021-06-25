@@ -1,4 +1,4 @@
-// Generated from C:/Users/86181/Desktop/course/大三下/数据库/选题一框架/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.9.1
+// Generated from /Users/anyanzhe/workspace/ThssDB/src/main/java/cn/edu/thssdb/parser/SQL.g4 by ANTLR 4.8
 package cn.edu.thssdb.parser;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
@@ -32,20 +32,6 @@ public class SQLBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements SQ
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitSql_stmt(SQLParser.Sql_stmtContext ctx) { return visitChildren(ctx); }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation returns the result of calling
-	 * {@link #visitChildren} on {@code ctx}.</p>
-	 */
-	@Override public T visitAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx) { return visitChildren(ctx); }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation returns the result of calling
-	 * {@link #visitChildren} on {@code ctx}.</p>
-	 */
-	@Override public T visitAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -186,20 +172,6 @@ public class SQLBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements SQ
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitUpdate_stmt(SQLParser.Update_stmtContext ctx) { return visitChildren(ctx); }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation returns the result of calling
-	 * {@link #visitChildren} on {@code ctx}.</p>
-	 */
-	@Override public T visitBegin_transaction_stmt(SQLParser.Begin_transaction_stmtContext ctx) { return visitChildren(ctx); }
-	/**
-	 * {@inheritDoc}
-	 *
-	 * <p>The default implementation returns the result of calling
-	 * {@link #visitChildren} on {@code ctx}.</p>
-	 */
-	@Override public T visitCommit_stmt(SQLParser.Commit_stmtContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
