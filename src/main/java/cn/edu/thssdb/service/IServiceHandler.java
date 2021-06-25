@@ -95,7 +95,7 @@ public class IServiceHandler implements IService.Iface {
       }
 
       String command = statement.split(" ")[0].toLowerCase();
-      if (manager.transactionSessions.contains(req.sessionId) && (command.equals("insert") || command.equals("update") || command.equals("delete") || command.equals("select"))) {
+      if (!manager.transactionSessions.contains(req.sessionId) && (command.equals("insert") || command.equals("update") || command.equals("delete") || command.equals("select"))) {
         handleCommand("auto begin transaction", req.sessionId, manager);
         ArrayList<QueryResult> result = handleCommand(statement, req.sessionId, manager);
         queryResults.addAll(result);

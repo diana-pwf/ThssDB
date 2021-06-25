@@ -34,6 +34,11 @@ public class Manager {
   public Manager() {
     databases = new HashMap<String, Database>();
     currentDatabase = null;
+    transactionSessions = new ArrayList<>();
+    blockedSessions = new ArrayList<>();
+    xLockDict = new HashMap<>();
+    sLockDict = new HashMap<>();
+
     try
     {
       this.recover();
