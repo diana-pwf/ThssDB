@@ -36,7 +36,7 @@ public class SingleTable extends QueryTable{
             }
             Condition cond = this.selectCondition.mSingleCondition;
             if(cond.mLeft.mType!= ComparerType.COLUMN && cond.mRight.mType!=ComparerType.COLUMN){
-                if(cond.JudgeCondition()== ResultType.TRUE){
+                if(cond.JudgeCondition(cond)== ResultType.TRUE){
                     addNextDirect();
                     return;
                 }

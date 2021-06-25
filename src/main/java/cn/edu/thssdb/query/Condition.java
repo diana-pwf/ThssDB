@@ -45,42 +45,44 @@ public class Condition {
 
     // called when compared with column
     ResultType JudgeCondition(QueryRow row){
+        Comparer left = new Comparer(mLeft.mType,String.valueOf(mLeft.mValue));
+        Comparer right = new Comparer(mRight.mType,String.valueOf(mRight.mValue));
         if(mLeft.mType== ComparerType.COLUMN){
-            mLeft = row.calColumnComparer((String) mLeft.mValue);
+            left = row.calColumnComparer((String) mLeft.mValue);
         }
         if(mRight.mType==ComparerType.COLUMN){
-            mRight = row.calColumnComparer((String)mRight.mValue);
+            right = row.calColumnComparer((String)mRight.mValue);
         }
-        return JudgeCondition();
+        return JudgeCondition(new Condition(left,right,mType));
     }
 
     // called when two constants are compared
-    ResultType JudgeCondition(){
-        if(mRight.mType==ComparerType.NULL||mLeft.mType==ComparerType.NULL){
+    ResultType JudgeCondition(Condition condition){
+        if(condition.mRight.mType==ComparerType.NULL||condition.mLeft.mType==ComparerType.NULL){
             return ResultType.UNKNOWN;
         }
-        if(mLeft.mType!=mRight.mType){
-            throw new CompareTypeNotMatchException(mLeft.mType,mRight.mType);
+        if(condition.mLeft.mType!=condition.mRight.mType){
+            throw new CompareTypeNotMatchException(condition.mLeft.mType,condition.mRight.mType);
         }
         boolean result = false;
         switch (mType){
             case EQ:
-                result = mLeft.mValue.compareTo(mRight.mValue) == 0;
+                result = condition.mLeft.mValue.compareTo(condition.mRight.mValue) == 0;
                 break;
             case NE:
-                result = mLeft.mValue.compareTo(mRight.mValue) != 0;
+                result = condition.mLeft.mValue.compareTo(condition.mRight.mValue) != 0;
                 break;
             case GE:
-                result = mLeft.mValue.compareTo(mRight.mValue) >= 0;
+                result = condition.mLeft.mValue.compareTo(condition.mRight.mValue) >= 0;
                 break;
             case LE:
-                result = mLeft.mValue.compareTo(mRight.mValue) <= 0;
+                result = condition.mLeft.mValue.compareTo(condition.mRight.mValue) <= 0;
                 break;
             case GT:
-                result = mLeft.mValue.compareTo(mRight.mValue) > 0;
+                result = condition.mLeft.mValue.compareTo(condition.mRight.mValue) > 0;
                 break;
             case LT:
-                result = mLeft.mValue.compareTo(mRight.mValue) < 0;
+                result = condition.mLeft.mValue.compareTo(condition.mRight.mValue) < 0;
                 break;
         }
         if(!result){
