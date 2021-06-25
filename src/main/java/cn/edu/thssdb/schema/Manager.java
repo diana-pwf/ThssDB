@@ -6,6 +6,7 @@ import cn.edu.thssdb.server.ThssDB;
 
 import javax.xml.crypto.Data;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -13,6 +14,11 @@ public class Manager {
   private HashMap<String, Database> databases;
   private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private Database currentDatabase;
+
+  public ArrayList<Long> transactionSessions;
+  public HashMap<Long, ArrayList<String>> sLockDict;
+  public HashMap<Long, ArrayList<String>> xLockDict;
+  public ArrayList<Long> blockedSessions;
 
   public static Manager getInstance() {
     return Manager.ManagerHolder.INSTANCE;

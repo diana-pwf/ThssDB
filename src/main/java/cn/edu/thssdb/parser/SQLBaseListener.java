@@ -52,6 +52,30 @@ public class SQLBaseListener implements SQLListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAuto_commit_stmt(SQLParser.Auto_commit_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitAuto_begin_transaction_stmt(SQLParser.Auto_begin_transaction_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterCreate_db_stmt(SQLParser.Create_db_stmtContext ctx) { }
 	/**
 	 * {@inheritDoc}
@@ -287,6 +311,30 @@ public class SQLBaseListener implements SQLListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitUpdate_stmt(SQLParser.Update_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterBegin_transaction_stmt(SQLParser.Begin_transaction_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitBegin_transaction_stmt(SQLParser.Begin_transaction_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterCommit_stmt(SQLParser.Commit_stmtContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitCommit_stmt(SQLParser.Commit_stmtContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
