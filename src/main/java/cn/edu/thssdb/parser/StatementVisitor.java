@@ -48,9 +48,7 @@ public class StatementVisitor extends SQLBaseVisitor{
     public QueryResult visitSql_stmt(SQLParser.Sql_stmtContext ctx) {
         // 处理各种语句和情况
         // create db
-        if(ctx.create_db_stmt() != null) {
-            return visitCreate_db_stmt(ctx.create_db_stmt());
-        }
+        if(ctx.create_db_stmt() != null) { return visitCreate_db_stmt(ctx.create_db_stmt()); }
 
         // drop db
         if(ctx.drop_db_stmt() != null){ return visitDrop_db_stmt(ctx.drop_db_stmt());}
@@ -64,57 +62,29 @@ public class StatementVisitor extends SQLBaseVisitor{
         // drop table
         if(ctx.drop_table_stmt() != null){ return visitDrop_table_stmt(ctx.drop_table_stmt());}
 
-        // TODO: USER 好像不是必须？
-        /*
-        // create user
-        if(ctx.create_user_stmt() != null){
-
-        }
-
-        // drop user
-        if(ctx.drop_user_stmt() != null){
-
-        }
-
-         */
-
         // insert
         if(ctx.insert_stmt() != null){ return visitInsert_stmt(ctx.insert_stmt());}
 
         // delete
-        if(ctx.delete_stmt() != null){
-            return visitDelete_stmt(ctx.delete_stmt());
-        }
+        if(ctx.delete_stmt() != null){ return visitDelete_stmt(ctx.delete_stmt()); }
 
         // select
-        if(ctx.select_stmt() != null){
-            return visitSelect_stmt(ctx.select_stmt());
-        }
+        if(ctx.select_stmt() != null){ return visitSelect_stmt(ctx.select_stmt()); }
 
         // update
-        if(ctx.update_stmt() != null){
-            return visitUpdate_stmt(ctx.update_stmt());
-        }
+        if(ctx.update_stmt() != null){ return visitUpdate_stmt(ctx.update_stmt()); }
 
         //
-        if(ctx.show_db_stmt() != null){
-            return visitShow_db_stmt(ctx.show_db_stmt());
-        }
+        if(ctx.show_db_stmt() != null){ return visitShow_db_stmt(ctx.show_db_stmt()); }
 
         //
-        if(ctx.show_table_stmt() != null){
-            return visitShow_table_stmt(ctx.show_table_stmt());
-        }
+        if(ctx.show_table_stmt() != null){ return visitShow_table_stmt(ctx.show_table_stmt()); }
 
         //
-        if(ctx.show_meta_stmt() != null){
-            return visitShow_meta_stmt(ctx.show_meta_stmt());
-        }
+        if(ctx.show_meta_stmt() != null){ return visitShow_meta_stmt(ctx.show_meta_stmt()); }
 
         // quit
         if(ctx.quit_stmt() != null){ return visitQuit_stmt(ctx.quit_stmt());}
-
-
 
         return null;
     }
