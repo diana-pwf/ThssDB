@@ -213,6 +213,8 @@ public class Manager {
       persist();
     } catch (IOException e) {
       e.printStackTrace();
+    } finally {
+      lock.writeLock().unlock();
     }
   }
 
