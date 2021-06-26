@@ -159,9 +159,6 @@ public class QueryResult {
       Entry[] entries = new Entry[columnSelectIdx.size()];
       for(int i=0;i<columnSelectIdx.size();i++){
         entries[i] = row.getEntries().get(columnSelectIdx.get(i));
-        if(entries[i].value == null){
-          entries[i].value = "null";
-        }
       }
       Row resultRow = new Row(entries);
       String rowStr = resultRow.toString();
